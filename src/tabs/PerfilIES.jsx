@@ -57,27 +57,27 @@ function NivelModalidadTable({ resumen, detalle, lastYear, prevYear }) {
           {expanded ? "Ver resumen" : "Ver detalle"}
         </button>
       </div>
-      <div className="overflow-x-auto scroll-thin rounded-xl border border-slate-200">
+      <div className="overflow-x-auto scroll-thin rounded-xl ring-1 ring-slate-200/70">
         <table className="w-full border-collapse text-[13px]">
           <thead>
             <tr className="bg-slate-50 text-[10px] font-semibold uppercase tracking-wide text-slate-500">
-              <th className="px-3 py-2 text-left">Modalidad</th>
-              <th className="px-3 py-2 text-left">{expanded ? "Nivel de formación" : "Nivel"}</th>
-              <th className="px-3 py-2 text-right">{prevYear}</th>
-              <th className="px-3 py-2 text-right">{lastYear}</th>
-              <th className="px-3 py-2 text-right">Var %</th>
-              <th className="px-3 py-2 text-right">Var Abs.</th>
+              <th className="px-3 py-1.5 text-left">Modalidad</th>
+              <th className="px-3 py-1.5 text-left">{expanded ? "Nivel de formación" : "Nivel"}</th>
+              <th className="px-3 py-1.5 text-right">{prevYear}</th>
+              <th className="px-3 py-1.5 text-right">{lastYear}</th>
+              <th className="px-3 py-1.5 text-right">Var %</th>
+              <th className="px-3 py-1.5 text-right">Var Abs.</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
             {data.rows.map((r) => (
               <tr key={r.key} className="hover:bg-slate-50/80">
-                <td className="px-3 py-2">{formatModalidad(r.modalidad)}</td>
-                <td className="px-3 py-2">{expanded ? formatNivel(r.nivel) : r.nivel ?? "—"}</td>
-                <td className="px-3 py-2 text-right tabular-nums">{fmt(r.prev)}</td>
-                <td className="px-3 py-2 text-right tabular-nums">{fmt(r.last)}</td>
-                <td className="px-3 py-2 text-right">{r.growth == null ? <span className="text-slate-300">—</span> : <TrendBadge value={r.growth} />}</td>
-                <td className="px-3 py-2 text-right font-semibold tabular-nums">{fmt(r.dif)}</td>
+                <td className="px-3 py-1.5">{formatModalidad(r.modalidad)}</td>
+                <td className="px-3 py-1.5">{expanded ? formatNivel(r.nivel) : r.nivel ?? "—"}</td>
+                <td className="px-3 py-1.5 text-right tabular-nums">{fmt(r.prev)}</td>
+                <td className="px-3 py-1.5 text-right tabular-nums">{fmt(r.last)}</td>
+                <td className="px-3 py-1.5 text-right">{r.growth == null ? <span className="text-slate-300">—</span> : <TrendBadge value={r.growth} />}</td>
+                <td className="px-3 py-1.5 text-right font-semibold tabular-nums">{fmt(r.dif)}</td>
               </tr>
             ))}
             {!data.rows.length && (
@@ -91,13 +91,13 @@ function NivelModalidadTable({ resumen, detalle, lastYear, prevYear }) {
           {data.rows.length > 0 && (
             <tfoot>
               <tr className="bg-brand-navy-50/70 font-semibold">
-                <td className="px-3 py-2" colSpan={2}>
+                <td className="px-3 py-1.5" colSpan={2}>
                   Total
                 </td>
-                <td className="px-3 py-2 text-right tabular-nums">{fmt(data.total.prev)}</td>
-                <td className="px-3 py-2 text-right tabular-nums">{fmt(data.total.last)}</td>
-                <td className="px-3 py-2 text-right">{data.total.growth == null ? "—" : <TrendBadge value={data.total.growth} />}</td>
-                <td className="px-3 py-2 text-right tabular-nums">{fmt(data.total.dif)}</td>
+                <td className="px-3 py-1.5 text-right tabular-nums">{fmt(data.total.prev)}</td>
+                <td className="px-3 py-1.5 text-right tabular-nums">{fmt(data.total.last)}</td>
+                <td className="px-3 py-1.5 text-right">{data.total.growth == null ? "—" : <TrendBadge value={data.total.growth} />}</td>
+                <td className="px-3 py-1.5 text-right tabular-nums">{fmt(data.total.dif)}</td>
               </tr>
             </tfoot>
           )}
@@ -112,28 +112,28 @@ function NivelModalidadTable({ resumen, detalle, lastYear, prevYear }) {
 function ProgramGrowthTable({ items, tone }) {
   const color = tone === "up" ? "text-emerald-600" : "text-rose-600";
   return (
-    <div className="overflow-x-auto scroll-thin rounded-xl border border-slate-200">
+    <div className="overflow-x-auto scroll-thin rounded-xl ring-1 ring-slate-200/70">
       <table className="w-full border-collapse text-[13px]">
         <thead>
           <tr className="bg-slate-50 text-[10px] font-semibold uppercase tracking-wide text-slate-500">
-            <th className="px-3 py-2 text-left">Programa</th>
-            <th className="px-3 py-2 text-left">Nivel</th>
-            <th className="px-3 py-2 text-left">Modalidad</th>
-            <th className="px-3 py-2 text-right">Dif.</th>
-            <th className="px-3 py-2 text-right">%</th>
+            <th className="px-3 py-1.5 text-left">Programa</th>
+            <th className="px-3 py-1.5 text-left">Nivel</th>
+            <th className="px-3 py-1.5 text-left">Modalidad</th>
+            <th className="px-3 py-1.5 text-right">Dif.</th>
+            <th className="px-3 py-1.5 text-right">%</th>
           </tr>
         </thead>
         <tbody className="divide-y divide-slate-100">
           {items.map((p, i) => (
             <tr key={i} className="hover:bg-slate-50/80">
-              <td className="px-3 py-2">{p.programa}</td>
-              <td className="px-3 py-2 text-slate-500">{formatNivel(p.nivel)}</td>
-              <td className="px-3 py-2 text-slate-500">{formatModalidad(p.modalidad)}</td>
-              <td className={`px-3 py-2 text-right font-semibold tabular-nums ${color}`}>
+              <td className="px-3 py-1.5">{p.programa}</td>
+              <td className="px-3 py-1.5 text-slate-500">{formatNivel(p.nivel)}</td>
+              <td className="px-3 py-1.5 text-slate-500">{formatModalidad(p.modalidad)}</td>
+              <td className={`px-3 py-1.5 text-right font-semibold tabular-nums ${color}`}>
                 {p.dif >= 0 ? "+" : ""}
                 {fmt(p.dif)}
               </td>
-              <td className="px-3 py-2 text-right">{p.growth == null ? "—" : <TrendBadge value={p.growth} />}</td>
+              <td className="px-3 py-1.5 text-right">{p.growth == null ? "—" : <TrendBadge value={p.growth} />}</td>
             </tr>
           ))}
           {!items.length && (
@@ -180,23 +180,23 @@ function NuevosProgramasTable({ items, lastYear }) {
   const hidden = items.length - ROWS_VISIBLE;
   return (
     <div>
-      <div className="overflow-x-auto scroll-thin rounded-xl border border-slate-200">
+      <div className="overflow-x-auto scroll-thin rounded-xl ring-1 ring-slate-200/70">
         <table className="w-full border-collapse text-[13px]">
           <thead>
             <tr className="bg-slate-50 text-[10px] font-semibold uppercase tracking-wide text-slate-500">
-              <th className="px-3 py-2 text-left">Programa</th>
-              <th className="px-3 py-2 text-left">Nivel</th>
-              <th className="px-3 py-2 text-left">Modalidad</th>
-              <th className="px-3 py-2 text-right">Nuevos</th>
+              <th className="px-3 py-1.5 text-left">Programa</th>
+              <th className="px-3 py-1.5 text-left">Nivel</th>
+              <th className="px-3 py-1.5 text-left">Modalidad</th>
+              <th className="px-3 py-1.5 text-right">Nuevos</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
             {visible.map((p, i) => (
               <tr key={i} className="hover:bg-slate-50/80">
-                <td className="px-3 py-2">{p.programa}</td>
-                <td className="px-3 py-2 text-slate-500">{formatNivel(p.nivel)}</td>
-                <td className="px-3 py-2 text-slate-500">{formatModalidad(p.modalidad)}</td>
-                <td className="px-3 py-2 text-right font-semibold tabular-nums text-emerald-600">+{fmt(p.nuevos)}</td>
+                <td className="px-3 py-1.5">{p.programa}</td>
+                <td className="px-3 py-1.5 text-slate-500">{formatNivel(p.nivel)}</td>
+                <td className="px-3 py-1.5 text-slate-500">{formatModalidad(p.modalidad)}</td>
+                <td className="px-3 py-1.5 text-right font-semibold tabular-nums text-emerald-600">+{fmt(p.nuevos)}</td>
               </tr>
             ))}
             {!items.length && (
@@ -244,26 +244,26 @@ function Nuevos2026Table({ items }) {
   const hayHomologos = rows.some((p) => p.grupo_homologo != null);
   return (
     <div>
-      <div className="overflow-x-auto scroll-thin rounded-xl border border-slate-200">
+      <div className="overflow-x-auto scroll-thin rounded-xl ring-1 ring-slate-200/70">
         <table className="w-full border-collapse text-[13px]">
           <thead>
             <tr className="bg-slate-50 text-[10px] font-semibold uppercase tracking-wide text-slate-500">
-              <th className="px-3 py-2 text-left">Programa</th>
-              <th className="px-3 py-2 text-left">Nivel de formación</th>
-              <th className="px-3 py-2 text-left">Modalidad</th>
+              <th className="px-3 py-1.5 text-left">Programa</th>
+              <th className="px-3 py-1.5 text-left">Nivel de formación</th>
+              <th className="px-3 py-1.5 text-left">Modalidad</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
             {visible.map((p, i) => (
               <tr key={i} className="hover:bg-slate-50/80">
-                <td className="px-3 py-2">
+                <td className="px-3 py-1.5">
                   <span className="inline-flex items-center gap-1.5">
                     {p.grupo_homologo != null && <Check size={13} strokeWidth={3} className="shrink-0 text-brand-cyan" />}
                     {p.programa_academico}
                   </span>
                 </td>
-                <td className="px-3 py-2 text-slate-500">{formatNivel(p.nivel_formacion)}</td>
-                <td className="px-3 py-2 text-slate-500">{formatModalidadCiudad(p.metodologia, p.municipio_programa)}</td>
+                <td className="px-3 py-1.5 text-slate-500">{formatNivel(p.nivel_formacion)}</td>
+                <td className="px-3 py-1.5 text-slate-500">{formatModalidadCiudad(p.metodologia, p.municipio_programa)}</td>
               </tr>
             ))}
             {!loading && !rows.length && (
@@ -449,7 +449,7 @@ export function PerfilIES() {
   }, [institucion, rows, nationalRows, filters]);
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-5">
       <Card
         icon={Building2}
         title="Perfil IES"
@@ -474,17 +474,31 @@ export function PerfilIES() {
         ) : !derived ? (
           <div className="py-16 text-center text-sm text-slate-400">Cargando…</div>
         ) : (
-          <div className="mt-5 flex flex-col gap-6 lg:flex-row lg:items-center">
-            <div className="flex flex-1 flex-wrap gap-3">
+          <div className="mt-5 flex flex-col gap-4 lg:flex-row lg:items-center">
+            <div className="flex flex-1 flex-wrap gap-2.5">
               <KpiTile label={`Primer curso ${derived.lastYear}`} value={fmt(derived.lastShareRow?.valor ?? 0)} delta={derived.growthPC} />
               <KpiTile label={`Participación nacional (${derived.lastYear})`} value={pct(derived.lastShareRow?.share ?? 0)} />
               <KpiTile label="Posición nacional" value={derived.lastShareRow ? `#${derived.lastShareRow.rank} / ${derived.totalInstsLastYear}` : "—"} />
               <KpiTile label={`Programas nuevos ${derived.lastYear}`} value={`${derived.nuevosProgramas.count} → ${fmt(derived.nuevosProgramas.total)}`} />
-              <KpiTile label="Top 5 programas concentra" value={pct(derived.pareto.top5Share)} />
-              <KpiTile label="Top 10 programas concentra" value={pct(derived.pareto.top10Share)} />
-              <KpiTile label="Top 20 programas concentra" value={pct(derived.pareto.top20Share)} />
+              <div className="min-w-[190px] flex-1 rounded-xl bg-white p-3.5 shadow-[var(--shadow-card)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[var(--shadow-card-hover)]">
+                <span className="text-[10.5px] font-semibold uppercase tracking-wide text-slate-500">Concentración de programas</span>
+                <div className="mt-1.5 flex items-baseline gap-4">
+                  <div>
+                    <div className="text-[10.5px] text-slate-400">Top 5</div>
+                    <div className="text-lg font-bold tabular-nums leading-none text-brand-navy-900">{pct(derived.pareto.top5Share)}</div>
+                  </div>
+                  <div>
+                    <div className="text-[10.5px] text-slate-400">Top 10</div>
+                    <div className="text-lg font-bold tabular-nums leading-none text-brand-navy-900">{pct(derived.pareto.top10Share)}</div>
+                  </div>
+                  <div>
+                    <div className="text-[10.5px] text-slate-400">Top 20</div>
+                    <div className="text-lg font-bold tabular-nums leading-none text-brand-navy-900">{pct(derived.pareto.top20Share)}</div>
+                  </div>
+                </div>
+              </div>
             </div>
-            <div className="w-full shrink-0 lg:w-72">
+            <div className="w-full shrink-0 lg:w-64">
               <h4 className="mb-1 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-slate-400">
                 <PieChart size={12} /> Evolución de participación (últimos 5 años)
               </h4>
@@ -511,7 +525,7 @@ export function PerfilIES() {
 
       {derived && (
         <>
-          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+          <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
             <Card icon={Sparkles} title={`Programas nuevos ${derived.lastYear}`} subtitle={`Debuts con matrícula (Primer Curso) en ${derived.lastYear}`}>
               <NuevosProgramasTable items={derived.nuevosProgramas.items} lastYear={derived.lastYear} />
             </Card>
@@ -524,7 +538,7 @@ export function PerfilIES() {
             </Card>
           </div>
 
-          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+          <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
             <Card icon={TrendingUp} title="Por nivel y modalidad — Nuevos (Primer Curso)" subtitle={`${derived.prevYear} vs ${derived.lastYear}`}>
               <NivelModalidadTable resumen={derived.nuevosResumen} detalle={derived.nuevosDetalle} lastYear={derived.lastYear} prevYear={derived.prevYear} />
             </Card>
@@ -537,7 +551,7 @@ export function PerfilIES() {
             </Card>
           </div>
 
-          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+          <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
             <Card
               icon={TrendingUp}
               title="Programas que más crecen"

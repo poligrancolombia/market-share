@@ -57,17 +57,17 @@ export function AuthGate({ children }) {
 
   if (!key) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-slate-50 px-4">
+      <div className="flex min-h-screen items-center justify-center px-4">
         <form
           onSubmit={handleSubmit}
-          className="w-full max-w-sm rounded-2xl border border-slate-200/80 bg-white p-7 shadow-[var(--shadow-card)]"
+          className="w-full max-w-sm rounded-2xl bg-white p-8 shadow-[var(--shadow-card-hover)]"
         >
-          <div className="mb-5 flex flex-col items-center gap-2 text-center">
-            <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-brand-navy-900 text-white shadow-[var(--shadow-glow)]">
-              <KeyRound size={20} />
+          <div className="mb-6 flex flex-col items-center gap-2.5 text-center">
+            <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-brand-navy-900 to-brand-navy-700 text-white shadow-[var(--shadow-glow)]">
+              <KeyRound size={21} />
             </span>
-            <h1 className="text-[15px] font-semibold text-brand-navy-900">Market Share — Acceso</h1>
-            <p className="text-[12.5px] text-slate-500">Ingresa la contraseña para ver el mercado de educación superior.</p>
+            <h1 className="text-[16px] font-bold tracking-tight text-brand-navy-900">Market Share — Acceso</h1>
+            <p className="text-[12.5px] leading-relaxed text-slate-500">Ingresa la contraseña para ver el mercado de educación superior.</p>
           </div>
           <input
             type="password"
@@ -75,17 +75,17 @@ export function AuthGate({ children }) {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             placeholder="Contraseña"
-            className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-[13.5px] text-brand-navy-900 outline-none focus:border-brand-cyan focus:ring-2 focus:ring-brand-cyan-100"
+            className="w-full rounded-xl border border-slate-200 bg-slate-50/80 px-3.5 py-2.5 text-[13.5px] text-brand-navy-900 outline-none transition-all focus:border-brand-cyan focus:bg-white focus:ring-[3px] focus:ring-brand-cyan-100"
           />
           {wrongPassword && (
-            <p className="mt-2 flex items-center gap-1.5 text-[12.5px] font-medium text-rose-600">
+            <p className="mt-2.5 flex items-center gap-1.5 text-[12.5px] font-medium text-rose-600">
               <ShieldAlert size={13} /> Contraseña incorrecta.
             </p>
           )}
           <button
             type="submit"
             disabled={!password || checking}
-            className="mt-4 flex w-full items-center justify-center gap-2 rounded-lg bg-brand-navy-900 py-2.5 text-[13.5px] font-semibold text-white transition-opacity disabled:opacity-50"
+            className="mt-5 flex w-full items-center justify-center gap-2 rounded-xl bg-brand-navy-900 py-2.5 text-[13.5px] font-semibold text-white shadow-[0_4px_14px_-3px_rgb(15_56_90_/_0.5)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_8px_20px_-4px_rgb(15_56_90_/_0.55)] disabled:pointer-events-none disabled:opacity-50 disabled:hover:translate-y-0"
           >
             {checking && <Loader2 size={14} className="animate-spin" />}
             Entrar

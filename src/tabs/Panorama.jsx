@@ -68,6 +68,31 @@ function ParetoCompareBarLabel({ x, y, width, value }) {
   );
 }
 
+// etiqueta vertical (texto rotado -90°) sobre cada barra -- con dos barras
+// (Oficial/Privado) muy juntas por año, un número horizontal se encimaría
+// con el de la barra vecina; rotado crece hacia arriba sin invadir al lado.
+function VerticalBarLabel({ x, y, width, value, fill }) {
+  if (value == null) return null;
+  const cx = x + width / 2;
+  const cy = y - 6;
+  return (
+    <text x={cx} y={cy} textAnchor="start" transform={`rotate(-90, ${cx}, ${cy})`} fontSize={10} fontWeight={700} fill={fill}>
+      {fmt(value)}
+    </text>
+  );
+}
+
+// etiqueta horizontal centrada sobre cada punto de una línea -- los puntos
+// van más espaciados entre sí que las barras, así que aquí sí cabe sin rotar.
+function LinePointLabel({ x, y, value, fill }) {
+  if (value == null) return null;
+  return (
+    <text x={x} y={y - 10} textAnchor="middle" fontSize={10.5} fontWeight={700} fill={fill}>
+      {fmt(value)}
+    </text>
+  );
+}
+
 const YEAR_COLORS = ["#cbd5e1", "#6dd3ec", "#1fb2de"];
 const SECTOR_COLORS = { Oficial: "#0f385a", Privado: "#1fb2de" };
 const MERCADO_COLOR = "#0f385a";
@@ -85,11 +110,11 @@ function GrowthLabel({ x, y, width, index, data }) {
   const pctText = d.growth == null ? "s/d" : `${up ? "+" : ""}${(d.growth * 100).toFixed(1)}%`;
   const difText = `${up ? "+" : ""}${fmt(d.dif)}`;
   return (
-    <g transform={`translate(${x + width / 2}, ${y - 20})`} textAnchor="middle">
-      <text fontSize={10.5} fontWeight={700} fill={color}>
+    <g transform={`translate(${x + width / 2}, ${y - 24})`} textAnchor="middle">
+      <text fontSize={12.5} fontWeight={800} fill={color}>
         {pctText}
       </text>
-      <text dy={12} fontSize={9.5} fontWeight={600} fill={color}>
+      <text dy={13} fontSize={10.5} fontWeight={700} fill={color}>
         {difText}
       </text>
     </g>
@@ -358,7 +383,7 @@ export function Panorama() {
   const { summary } = bridge;
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-5">
       <Card
         icon={BarChart3}
         title="Principales IES"
@@ -518,20 +543,27 @@ export function Panorama() {
         </div>
       </Card>
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
         <Card icon={TrendingUp} title="Evolución por sector" subtitle="Valores absolutos, con el crecimiento del último año">
-          <div style={{ width: "100%", height: 300 }}>
+          <div style={{ width: "100%", height: 320 }}>
             <ResponsiveContainer>
-              <ComposedChart data={sectorEvo.abs} margin={{ top: 24, right: 12, bottom: 0, left: 0 }}>
+              <ComposedChart data={sectorEvo.abs} margin={{ top: 56, right: 12, bottom: 0, left: 0 }}>
                 <CartesianGrid vertical={false} stroke="#eef2f6" />
                 <XAxis dataKey="anio" tick={{ fontSize: 11, fill: "#64748b" }} axisLine={{ stroke: "#e2e8f0" }} tickLine={false} />
                 <YAxis hide />
                 <Tooltip content={<ChartTooltip formatter={(v) => fmt(v)} />} cursor={{ fill: "rgba(31,178,222,0.06)" }} />
                 <Legend wrapperStyle={{ fontSize: 12 }} />
-                {sectorEvo.sectors.map((s) => (
-                  <Bar key={s} dataKey={s} name={s} fill={SECTOR_COLORS[s] ?? "#94a3b8"} radius={[3, 3, 0, 0]} />
-                ))}
-                <Line type="monotone" dataKey="Total" stroke="#0f172a" strokeWidth={2} dot={{ r: 3 }} />
+                {sectorEvo.sectors.map((s) => {
+                  const color = SECTOR_COLORS[s] ?? "#94a3b8";
+                  return (
+                    <Bar key={s} dataKey={s} name={s} fill={color} radius={[3, 3, 0, 0]} isAnimationActive={false}>
+                      <LabelList dataKey={s} content={<VerticalBarLabel fill={color} />} />
+                    </Bar>
+                  );
+                })}
+                <Line type="monotone" dataKey="Total" name="Total" stroke="#0f172a" strokeWidth={2} dot={{ r: 3 }} isAnimationActive={false}>
+                  <LabelList dataKey="Total" content={<LinePointLabel fill="#0f172a" />} />
+                </Line>
               </ComposedChart>
             </ResponsiveContainer>
           </div>
@@ -574,7 +606,7 @@ export function Panorama() {
       </div>
 
       <Card icon={TrendingUp} title="Evolución por modalidad" subtitle="Participación de cada modalidad sobre el total nacional, por año">
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
           <div style={{ width: "100%", height: 340 }}>
             <ResponsiveContainer>
               <LineChart data={modalidadEvo} margin={{ top: 24, right: 16, bottom: 0, left: 16 }}>
@@ -603,23 +635,23 @@ export function Panorama() {
             <h4 className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-slate-400">
               Migración de modalidad — % Presencial por nivel de formación, {anios[0]} vs. {lastYear}
             </h4>
-            <div className="overflow-x-auto scroll-thin rounded-xl border border-slate-200">
+            <div className="overflow-x-auto scroll-thin rounded-xl ring-1 ring-slate-200/70">
               <table className="w-full border-collapse text-[13px]">
                 <thead>
                   <tr className="bg-slate-50 text-[10px] font-semibold uppercase tracking-wide text-slate-500">
-                    <th className="px-3 py-2 text-left">Nivel de formación</th>
-                    <th className="px-3 py-2 text-right">%Presencial {anios[0]}</th>
-                    <th className="px-3 py-2 text-right">%Presencial {lastYear}</th>
-                    <th className="px-3 py-2 text-right">Δ</th>
+                    <th className="px-3 py-1.5 text-left">Nivel de formación</th>
+                    <th className="px-3 py-1.5 text-right">%Presencial {anios[0]}</th>
+                    <th className="px-3 py-1.5 text-right">%Presencial {lastYear}</th>
+                    <th className="px-3 py-1.5 text-right">Δ</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
                   {modalidadMigracion.items.map((d) => (
                     <tr key={d.nivel} className="hover:bg-slate-50/80">
-                      <td className="px-3 py-2 font-medium text-brand-navy-900">{formatNivel(d.nivel)}</td>
-                      <td className="px-3 py-2 text-right tabular-nums text-slate-700">{d.sharePresF == null ? "—" : pct(d.sharePresF)}</td>
-                      <td className="px-3 py-2 text-right tabular-nums text-slate-700">{d.sharePresL == null ? "—" : pct(d.sharePresL)}</td>
-                      <td className="px-3 py-2 text-right">
+                      <td className="px-3 py-1.5 font-medium text-brand-navy-900">{formatNivel(d.nivel)}</td>
+                      <td className="px-3 py-1.5 text-right tabular-nums text-slate-700">{d.sharePresF == null ? "—" : pct(d.sharePresF)}</td>
+                      <td className="px-3 py-1.5 text-right tabular-nums text-slate-700">{d.sharePresL == null ? "—" : pct(d.sharePresL)}</td>
+                      <td className="px-3 py-1.5 text-right">
                         <DeltaCell value={d.deltaPresencial} />
                       </td>
                     </tr>

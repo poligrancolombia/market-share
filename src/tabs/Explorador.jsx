@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Bar, BarChart, CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis, Legend } from "recharts";
+import { Bar, BarChart, CartesianGrid, LabelList, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis, Legend } from "recharts";
 import { Layers } from "lucide-react";
 import { useDuckDB } from "../lib/duckdb";
 import { useFilters, whereBase } from "../state/FiltersContext";
@@ -25,6 +25,18 @@ const DIMENSIONS = [
 
 const SERIES_COLORS = ["#1fb2de", "#0f385a", "#6dd3ec", "#f2a541", "#7c6fe0", "#2fb88a", "#e0637c", "#8a97a8"];
 const colorFor = (i) => SERIES_COLORS[i % SERIES_COLORS.length];
+
+// etiqueta de valor sobre cada barra -- solo se activa hasta 20 categorías
+// (Top N configurable hasta 40): con más barras el texto se encimaría, y el
+// tooltip ya cubre el detalle.
+function SingleBarLabel({ x, y, width, value }) {
+  if (value == null) return null;
+  return (
+    <text x={x + width / 2} y={y - 8} textAnchor="middle" fontSize={10.5} fontWeight={700} fill="#0f385a">
+      {fmt(value)}
+    </text>
+  );
+}
 
 export function Explorador() {
   const { query } = useDuckDB();
@@ -110,7 +122,7 @@ export function Explorador() {
     : [];
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-5">
       <Card
         icon={Layers}
         title="Explorador de dimensiones"
@@ -134,7 +146,7 @@ export function Explorador() {
               max={40}
               value={topN}
               onChange={(e) => setTopN(Math.min(40, Math.max(3, parseInt(e.target.value, 10) || 12)))}
-              className="w-20 rounded-lg border border-slate-200 bg-white px-2.5 py-2 text-[13.5px] text-brand-navy-900 shadow-sm outline-none focus:border-brand-cyan focus:ring-2 focus:ring-brand-cyan-100"
+              className="w-20 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-[13.5px] text-brand-navy-900 shadow-sm outline-none focus:border-brand-cyan focus:ring-2 focus:ring-brand-cyan-100"
             />
           </label>
         </div>
@@ -187,7 +199,7 @@ export function Explorador() {
                     ))}
                   </BarChart>
                 ) : (
-                  <BarChart data={chartData} margin={{ top: 12, right: 16, bottom: 40, left: 0 }} barCategoryGap="24%">
+                  <BarChart data={chartData} margin={{ top: topN > 20 ? 12 : 26, right: 16, bottom: 40, left: 0 }} barCategoryGap="24%">
                     <CartesianGrid vertical={false} stroke="#eef2f6" />
                     <XAxis
                       dataKey="d1"
@@ -201,26 +213,28 @@ export function Explorador() {
                     />
                     <YAxis hide />
                     <Tooltip content={<ChartTooltip formatter={(v) => fmt(v)} />} cursor={{ fill: "rgba(31,178,222,0.06)" }} />
-                    <Bar dataKey="total" name={dim1Label} fill={colorFor(0)} radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="total" name={dim1Label} fill={colorFor(0)} radius={[4, 4, 0, 0]} isAnimationActive={false}>
+                      {topN <= 20 && <LabelList dataKey="total" content={<SingleBarLabel />} />}
+                    </Bar>
                   </BarChart>
                 )}
               </ResponsiveContainer>
             </div>
             {dim2 && <InteractiveLegend items={legendItems} hidden={hidden} onToggle={toggleSeries} />}
 
-            <div className="mt-5 overflow-x-auto scroll-thin rounded-xl border border-slate-200">
+            <div className="mt-5 overflow-x-auto scroll-thin rounded-xl ring-1 ring-slate-200/70">
               <table className="w-full border-collapse text-[13.5px]">
                 <thead>
                   <tr className="bg-slate-50 text-[10.5px] font-semibold uppercase tracking-wide text-slate-500">
-                    <th className="px-3 py-2.5 text-left">{dim1Label}</th>
+                    <th className="px-3 py-1.5 text-left">{dim1Label}</th>
                     {dim2 ? (
                       dim2Vals.map((v) => (
-                        <th key={v} className="px-3 py-2.5 text-right tabular-nums">
+                        <th key={v} className="px-3 py-1.5 text-right tabular-nums">
                           {v}
                         </th>
                       ))
                     ) : (
-                      <th className="px-3 py-2.5 text-right">Total</th>
+                      <th className="px-3 py-1.5 text-right">Total</th>
                     )}
                   </tr>
                 </thead>
@@ -228,9 +242,9 @@ export function Explorador() {
                   {dim2
                     ? d1Order.map((d1v) => (
                         <tr key={d1v}>
-                          <td className="px-3 py-2.5">{d1v}</td>
+                          <td className="px-3 py-1.5">{d1v}</td>
                           {dim2Vals.map((v) => (
-                            <td key={v} className="px-3 py-2.5 text-right tabular-nums">
+                            <td key={v} className="px-3 py-1.5 text-right tabular-nums">
                               {byDim1.get(d1v)?.[v] == null ? "" : fmt(byDim1.get(d1v)[v])}
                             </td>
                           ))}
@@ -238,8 +252,8 @@ export function Explorador() {
                       ))
                     : top.map((r) => (
                         <tr key={String(r.d1)}>
-                          <td className="px-3 py-2.5">{String(r.d1)}</td>
-                          <td className="px-3 py-2.5 text-right tabular-nums">{fmt(r.total)}</td>
+                          <td className="px-3 py-1.5">{String(r.d1)}</td>
+                          <td className="px-3 py-1.5 text-right tabular-nums">{fmt(r.total)}</td>
                         </tr>
                       ))}
                 </tbody>

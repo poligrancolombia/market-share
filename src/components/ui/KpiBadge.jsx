@@ -27,19 +27,19 @@ export function TrendBadge({ value, size = "sm" }) {
 export function KpiTile({ label, value, delta, icon: Icon, accent = false }) {
   return (
     <div
-      className={`flex-1 min-w-[160px] rounded-xl border p-4 transition-colors ${
-        accent ? "border-brand-cyan-200 bg-brand-cyan-50/60" : "border-slate-200 bg-white"
+      className={`flex-1 min-w-[152px] rounded-xl p-4 shadow-[var(--shadow-card)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[var(--shadow-card-hover)] ${
+        accent ? "bg-gradient-to-br from-brand-cyan-50 to-brand-cyan-50/40 ring-1 ring-brand-cyan-200" : "bg-white"
       }`}
     >
       <div className="flex items-center justify-between gap-2">
-        <span className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">{label}</span>
-        {Icon && <Icon size={14} className="text-slate-400" />}
+        <span className="text-[10.5px] font-semibold uppercase tracking-wide text-slate-500">{label}</span>
+        {Icon && <Icon size={13} className="text-slate-400" />}
       </div>
-      <div className="mt-1.5 flex items-baseline gap-2">
-        <span className="text-2xl font-bold tabular-nums text-brand-navy-900">{value}</span>
+      <div className="mt-1 flex items-baseline gap-2">
+        <span className="text-[26px] font-bold leading-none tracking-tight tabular-nums text-brand-navy-900">{value}</span>
       </div>
       {delta !== undefined && (
-        <div className="mt-1.5">
+        <div className="mt-2">
           <TrendBadge value={delta} />
         </div>
       )}

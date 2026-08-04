@@ -196,43 +196,43 @@ export function Historico() {
             max={100}
             value={topN}
             onChange={(e) => setTopN(parseInt(e.target.value, 10) || 30)}
-            className="w-20 rounded-lg border border-slate-200 bg-white px-2.5 py-2 text-[13.5px] text-brand-navy-900 shadow-sm outline-none focus:border-brand-cyan focus:ring-2 focus:ring-brand-cyan-100"
+            className="w-20 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-[13.5px] text-brand-navy-900 shadow-sm outline-none focus:border-brand-cyan focus:ring-2 focus:ring-brand-cyan-100"
           />
         </label>
       </div>
 
-      <div className="overflow-x-auto scroll-thin rounded-xl border border-slate-200">
+      <div className="overflow-x-auto scroll-thin rounded-xl ring-1 ring-slate-200/70">
         <table className="w-full border-collapse text-[13.5px]">
           <thead>
             <tr className="bg-slate-50 text-[10.5px] font-semibold uppercase tracking-wide text-slate-500">
-              <th className="px-3 py-2.5 text-left">{byProgram ? "Institución / Programa" : "Institución"}</th>
+              <th className="px-3 py-1.5 text-left">{byProgram ? "Institución / Programa" : "Institución"}</th>
               {anios.map((a) => (
-                <th key={a} className="px-3 py-2.5 text-right tabular-nums">
+                <th key={a} className="px-3 py-1.5 text-right tabular-nums">
                   {a}
                 </th>
               ))}
-              <th className="px-3 py-2.5 text-right">{varLabel}</th>
-              <th className="px-3 py-2.5 text-right">{difLabel}</th>
-              <th className="px-3 py-2.5 text-left">Tendencia</th>
-              <th className="px-3 py-2.5 text-right">Tasa Prom.</th>
+              <th className="px-3 py-1.5 text-right">{varLabel}</th>
+              <th className="px-3 py-1.5 text-right">{difLabel}</th>
+              <th className="px-3 py-1.5 text-left">Tendencia</th>
+              <th className="px-3 py-1.5 text-right">Tasa Prom.</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
             <tr className="bg-brand-navy-50/70 font-semibold">
-              <td className="px-3 py-2.5">
+              <td className="px-3 py-1.5">
                 Subtotal — {totalCount} {byProgram ? "programas" : "instituciones"}
               </td>
               {subtotal.values.map((v, i) => (
-                <td key={i} className="px-3 py-2.5 text-right tabular-nums">
+                <td key={i} className="px-3 py-1.5 text-right tabular-nums">
                   {fmt(v)}
                 </td>
               ))}
-              <td className="px-3 py-2.5 text-right">{subtotal.varr == null ? "—" : <TrendBadge value={subtotal.varr} />}</td>
-              <td className="px-3 py-2.5 text-right tabular-nums">{fmt(subtotal.dif)}</td>
-              <td className="px-3 py-2.5">
+              <td className="px-3 py-1.5 text-right">{subtotal.varr == null ? "—" : <TrendBadge value={subtotal.varr} />}</td>
+              <td className="px-3 py-1.5 text-right tabular-nums">{fmt(subtotal.dif)}</td>
+              <td className="px-3 py-1.5">
                 <Sparkline values={subtotal.values} />
               </td>
-              <td className="px-3 py-2.5 text-right">
+              <td className="px-3 py-1.5 text-right">
                 {(() => {
                   const tasa = buildTasaPromedio(subtotal.years, anios, lastYear);
                   return tasa == null ? "—" : <TrendBadge value={tasa} />;
@@ -263,7 +263,7 @@ export function Historico() {
           </tbody>
         </table>
         {clipped && (
-          <div className="border-t border-slate-100 px-3 py-2.5 text-xs text-slate-400">
+          <div className="border-t border-slate-100 px-3 py-1.5 text-xs text-slate-400">
             Mostrando los {topN} de mayor valor en {lastYear} (de {totalCount} en el segmento filtrado) — ajusta Top N para ver más.
           </div>
         )}
@@ -277,7 +277,7 @@ function FragmentRow({ entry, anios, lastYear, expandable, isOpen, onToggle, hig
   return (
     <>
       <tr className={highlight ? "bg-brand-cyan-50/60" : "hover:bg-slate-50/80"}>
-        <td className="px-3 py-2.5">
+        <td className="px-3 py-1.5">
           {expandable ? (
             <button onClick={onToggle} className="flex items-center gap-1.5 font-medium text-brand-navy-900 hover:text-brand-cyan">
               {isOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
@@ -295,16 +295,16 @@ function FragmentRow({ entry, anios, lastYear, expandable, isOpen, onToggle, hig
           )}
         </td>
         {entry.values.map((v, i) => (
-          <td key={i} className="px-3 py-2.5 text-right tabular-nums text-slate-700">
+          <td key={i} className="px-3 py-1.5 text-right tabular-nums text-slate-700">
             {fmt(v)}
           </td>
         ))}
-        <td className="px-3 py-2.5 text-right">{entry.varr == null ? <span className="text-slate-300">—</span> : <TrendBadge value={entry.varr} />}</td>
-        <td className="px-3 py-2.5 text-right tabular-nums text-slate-700">{fmt(entry.dif)}</td>
-        <td className="px-3 py-2.5">
+        <td className="px-3 py-1.5 text-right">{entry.varr == null ? <span className="text-slate-300">—</span> : <TrendBadge value={entry.varr} />}</td>
+        <td className="px-3 py-1.5 text-right tabular-nums text-slate-700">{fmt(entry.dif)}</td>
+        <td className="px-3 py-1.5">
           <Sparkline values={entry.values} />
         </td>
-        <td className="px-3 py-2.5 text-right">{entryTasa == null ? <span className="text-slate-300">—</span> : <TrendBadge value={entryTasa} />}</td>
+        <td className="px-3 py-1.5 text-right">{entryTasa == null ? <span className="text-slate-300">—</span> : <TrendBadge value={entryTasa} />}</td>
       </tr>
 
       {isOpen === false ? null : subEntries === null ? (
@@ -318,20 +318,20 @@ function FragmentRow({ entry, anios, lastYear, expandable, isOpen, onToggle, hig
           const pTasa = buildTasaPromedio(p.years, anios, lastYear);
           return (
             <tr key={`${p.row.codigo_snies_programa}-${p.row.programa_academico}`} className={isPoli(entry.row.institucion) ? "bg-brand-cyan-50/40" : "bg-slate-50/50"}>
-              <td className="px-3 py-2 pl-9 text-[12.5px] text-slate-600">
+              <td className="px-3 py-1.5 pl-9 text-[12.5px] text-slate-600">
                 {p.row.programa_academico} <span className="text-slate-400">(SNIES {p.row.codigo_snies_programa ?? "—"})</span>
               </td>
               {p.values.map((v, i) => (
-                <td key={i} className="px-3 py-2 text-right tabular-nums text-slate-500">
+                <td key={i} className="px-3 py-1.5 text-right tabular-nums text-slate-500">
                   {fmt(v)}
                 </td>
               ))}
-              <td className="px-3 py-2 text-right">{p.varr == null ? <span className="text-slate-300">—</span> : <TrendBadge value={p.varr} />}</td>
-              <td className="px-3 py-2 text-right tabular-nums text-slate-500">{fmt(p.dif)}</td>
-              <td className="px-3 py-2">
+              <td className="px-3 py-1.5 text-right">{p.varr == null ? <span className="text-slate-300">—</span> : <TrendBadge value={p.varr} />}</td>
+              <td className="px-3 py-1.5 text-right tabular-nums text-slate-500">{fmt(p.dif)}</td>
+              <td className="px-3 py-1.5">
                 <Sparkline values={p.values} />
               </td>
-              <td className="px-3 py-2 text-right">{pTasa == null ? <span className="text-slate-300">—</span> : <TrendBadge value={pTasa} />}</td>
+              <td className="px-3 py-1.5 text-right">{pTasa == null ? <span className="text-slate-300">—</span> : <TrendBadge value={pTasa} />}</td>
             </tr>
           );
         })

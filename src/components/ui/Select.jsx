@@ -8,7 +8,7 @@ export function Select({ label, value, onChange, options, blankLabel, className 
         <select
           value={value}
           onChange={(e) => onChange(e.target.value)}
-          className="peer w-full appearance-none rounded-lg border border-slate-200 bg-white py-2 pl-3 pr-8 text-[13.5px] text-brand-navy-900 shadow-sm outline-none transition-colors hover:border-slate-300 focus:border-brand-cyan focus:ring-2 focus:ring-brand-cyan-100"
+          className="peer w-full cursor-pointer appearance-none rounded-full border border-slate-200 bg-slate-50/80 py-1.5 pl-3 pr-7 text-[13px] font-medium text-brand-navy-900 shadow-[0_1px_2px_0_rgb(15_56_90_/_0.04)] outline-none transition-all hover:border-slate-300 hover:bg-white hover:shadow-[0_2px_6px_-1px_rgb(15_56_90_/_0.08)] focus:border-brand-cyan focus:bg-white focus:ring-[3px] focus:ring-brand-cyan-100"
         >
           {blankLabel !== undefined && <option value="">{blankLabel}</option>}
           {options.map((o) => (

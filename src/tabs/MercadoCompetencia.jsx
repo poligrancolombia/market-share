@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Area, AreaChart, Bar, BarChart, CartesianGrid, Cell, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { Area, AreaChart, Bar, BarChart, CartesianGrid, Cell, LabelList, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { ArrowLeftRight, TrendingUp, PieChart, Building2, ListChecks } from "lucide-react";
 import { useDuckDB } from "../lib/duckdb";
 import { useFilters } from "../state/FiltersContext";
@@ -34,6 +34,29 @@ function InstTick({ x, y, payload, isPoli }) {
         {payload.value}
       </text>
     </g>
+  );
+}
+
+// etiqueta sobre cada barra de crecimiento -- color semántico por signo
+// (verde/rojo), formateado según sea % o diferencia absoluta.
+function GrowthBarLabel({ x, y, width, value, formatter }) {
+  if (value == null) return null;
+  const up = value >= 0;
+  return (
+    <text x={x + width / 2} y={up ? y - 6 : y + 14} textAnchor="middle" fontSize={11} fontWeight={700} fill={up ? GOOD : CRITICAL}>
+      {up ? "+" : ""}
+      {formatter(value)}
+    </text>
+  );
+}
+
+// etiqueta sobre cada punto del HHI -- valor entero centrado sobre el punto.
+function AreaPointLabel({ x, y, value }) {
+  if (value == null) return null;
+  return (
+    <text x={x} y={y - 10} textAnchor="middle" fontSize={10.5} fontWeight={700} fill="#0f385a">
+      {fmt(Math.round(value))}
+    </text>
   );
 }
 
@@ -209,7 +232,7 @@ export function MercadoCompetencia() {
   const growthAbs = derived ? pickGrowth(derived.growthAll, "dif", growthAbsSign) : [];
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-5">
       <Card
         icon={ArrowLeftRight}
         title="Mercado Competencia"
@@ -253,12 +276,12 @@ export function MercadoCompetencia() {
               value={derived.poliGrowth?.growth != null ? pct(derived.poliGrowth.growth) : "—"}
               delta={derived.poliGrowth?.growth}
             />
-            <div className="min-w-[160px] flex-1 rounded-xl border border-slate-200 bg-white p-4">
-              <span className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">HHI del grupo ({derived.lastYear})</span>
-              <div className="mt-1.5 flex items-baseline gap-2">
-                <span className="text-2xl font-bold tabular-nums text-brand-navy-900">{derived.hhiLast}</span>
+            <div className="min-w-[152px] flex-1 rounded-xl bg-white p-4 shadow-[var(--shadow-card)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[var(--shadow-card-hover)]">
+              <span className="text-[10.5px] font-semibold uppercase tracking-wide text-slate-500">HHI del grupo ({derived.lastYear})</span>
+              <div className="mt-1 flex items-baseline gap-2">
+                <span className="text-[26px] font-bold leading-none tracking-tight tabular-nums text-brand-navy-900">{derived.hhiLast}</span>
               </div>
-              <div className="mt-1.5 text-xs font-medium text-slate-500">{derived.hhiLabel}</div>
+              <div className="mt-2 text-xs font-medium text-slate-500">{derived.hhiLabel}</div>
             </div>
           </div>
         )}
@@ -266,7 +289,7 @@ export function MercadoCompetencia() {
 
       {derived && (
         <>
-          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+          <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
             <Card icon={PieChart} title="Participación de mercado por año" subtitle="Top instituciones del grupo homólogo, más el Poli">
               <div style={{ width: "100%", height: 300 }}>
                 <ResponsiveContainer>
@@ -309,12 +332,20 @@ export function MercadoCompetencia() {
             >
               <div style={{ width: "100%", height: 300 }}>
                 <ResponsiveContainer>
-                  <AreaChart data={derived.hhiChartData} margin={{ top: 12, right: 16, bottom: 0, left: 0 }}>
+                  <AreaChart data={derived.hhiChartData} margin={{ top: 24, right: 16, bottom: 0, left: 0 }}>
+                    <defs>
+                      <linearGradient id="hhiFill" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#0f385a" stopOpacity={0.28} />
+                        <stop offset="100%" stopColor="#0f385a" stopOpacity={0.02} />
+                      </linearGradient>
+                    </defs>
                     <CartesianGrid vertical={false} stroke="#eef2f6" />
                     <XAxis dataKey="anio" tick={{ fontSize: 11, fill: "#64748b" }} axisLine={{ stroke: "#e2e8f0" }} tickLine={false} />
                     <YAxis domain={[0, 10000]} hide />
                     <Tooltip content={<ChartTooltip formatter={(v) => fmt(v)} />} cursor={{ stroke: "#cbd5e1", strokeWidth: 1 }} />
-                    <Area type="monotone" dataKey="hhi" name="HHI" stroke="#8a97a8" fill="#8a97a8" fillOpacity={0.15} strokeWidth={2} />
+                    <Area type="monotone" dataKey="hhi" name="HHI" stroke="#0f385a" fill="url(#hhiFill)" strokeWidth={2.5} dot={{ r: 3, fill: "#0f385a", strokeWidth: 0 }} isAnimationActive={false}>
+                      <LabelList dataKey="hhi" content={<AreaPointLabel />} />
+                    </Area>
                   </AreaChart>
                 </ResponsiveContainer>
               </div>
@@ -348,13 +379,13 @@ export function MercadoCompetencia() {
               </ResponsiveContainer>
             </div>
 
-            <div className="mt-4 overflow-x-auto scroll-thin rounded-xl border border-slate-200">
+            <div className="mt-4 overflow-x-auto scroll-thin rounded-xl ring-1 ring-slate-200/70">
               <table className="w-full border-collapse text-[13px]">
                 <thead>
                   <tr className="bg-slate-50 text-[10px] font-semibold uppercase tracking-wide text-slate-500">
-                    <th className="px-3 py-2 text-left">Ficha del programa</th>
+                    <th className="px-3 py-1.5 text-left">Ficha del programa</th>
                     {derived.top10.map((inst) => (
-                      <th key={inst} className={`px-3 py-2 text-center ${isPoli(inst) ? "text-brand-cyan" : ""}`}>
+                      <th key={inst} className={`px-3 py-1.5 text-center ${isPoli(inst) ? "text-brand-cyan" : ""}`}>
                         {inst}
                       </th>
                     ))}
@@ -362,41 +393,41 @@ export function MercadoCompetencia() {
                 </thead>
                 <tbody className="divide-y divide-slate-100">
                   <tr>
-                    <td className="px-3 py-2 font-medium text-brand-navy-900">Duración (semestres)</td>
+                    <td className="px-3 py-1.5 font-medium text-brand-navy-900">Duración (semestres)</td>
                     {derived.top10.map((inst) => (
-                      <td key={inst} className="px-3 py-2 text-center tabular-nums">
+                      <td key={inst} className="px-3 py-1.5 text-center tabular-nums">
                         {detalleByInst.get(inst)?.duracion_periodos ?? "—"}
                       </td>
                     ))}
                   </tr>
                   <tr>
-                    <td className="px-3 py-2 font-medium text-brand-navy-900">Créditos</td>
+                    <td className="px-3 py-1.5 font-medium text-brand-navy-900">Créditos</td>
                     {derived.top10.map((inst) => (
-                      <td key={inst} className="px-3 py-2 text-center tabular-nums">
+                      <td key={inst} className="px-3 py-1.5 text-center tabular-nums">
                         {detalleByInst.get(inst)?.creditos ?? "—"}
                       </td>
                     ))}
                   </tr>
                   <tr>
-                    <td className="px-3 py-2 font-medium text-brand-navy-900">Tipo de registro</td>
+                    <td className="px-3 py-1.5 font-medium text-brand-navy-900">Tipo de registro</td>
                     {derived.top10.map((inst) => (
-                      <td key={inst} className="px-3 py-2 text-center">
+                      <td key={inst} className="px-3 py-1.5 text-center">
                         {formatRegistro(detalleByInst.get(inst)?.reconocimiento_ministerio)}
                       </td>
                     ))}
                   </tr>
                   <tr>
-                    <td className="px-3 py-2 font-medium text-brand-navy-900">Ciclo propedéutico</td>
+                    <td className="px-3 py-1.5 font-medium text-brand-navy-900">Ciclo propedéutico</td>
                     {derived.top10.map((inst) => (
-                      <td key={inst} className="px-3 py-2 text-center">
+                      <td key={inst} className="px-3 py-1.5 text-center">
                         {detalleByInst.get(inst)?.ciclos_propedeuticos ? "Sí" : "No"}
                       </td>
                     ))}
                   </tr>
                   <tr>
-                    <td className="px-3 py-2 font-medium text-brand-navy-900">Convenio</td>
+                    <td className="px-3 py-1.5 font-medium text-brand-navy-900">Convenio</td>
                     {derived.top10.map((inst) => (
-                      <td key={inst} className="px-3 py-2 text-center">
+                      <td key={inst} className="px-3 py-1.5 text-center">
                         {detalleByInst.get(inst)?.programa_en_convenio ? "Sí" : "No"}
                       </td>
                     ))}
@@ -406,7 +437,7 @@ export function MercadoCompetencia() {
             </div>
           </Card>
 
-          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+          <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
             <Card
               title="Crecimiento interanual (%)"
               subtitle={`vs. ${derived.prevYear} → ${derived.lastYear}`}
@@ -423,7 +454,7 @@ export function MercadoCompetencia() {
             >
               <div style={{ width: "100%", height: 300 }}>
                 <ResponsiveContainer>
-                  <BarChart data={growthPct} margin={{ top: 12, right: 16, bottom: 48, left: 0 }}>
+                  <BarChart data={growthPct} margin={{ top: 24, right: 16, bottom: 48, left: 0 }}>
                     <CartesianGrid vertical={false} stroke="#eef2f6" />
                     <XAxis
                       dataKey="institucion"
@@ -437,10 +468,11 @@ export function MercadoCompetencia() {
                     />
                     <YAxis hide />
                     <Tooltip content={<ChartTooltip formatter={(v) => pct(v)} labelFormatter={() => null} />} cursor={{ fill: "rgba(31,178,222,0.06)" }} />
-                    <Bar dataKey="growth" name="Crecimiento" radius={[4, 4, 0, 0]}>
+                    <Bar dataKey="growth" name="Crecimiento" radius={[4, 4, 0, 0]} isAnimationActive={false}>
                       {growthPct.map((d, i) => (
                         <Cell key={i} fill={d.growth >= 0 ? GOOD : CRITICAL} />
                       ))}
+                      <LabelList dataKey="growth" content={<GrowthBarLabel formatter={pct} />} />
                     </Bar>
                   </BarChart>
                 </ResponsiveContainer>
@@ -463,7 +495,7 @@ export function MercadoCompetencia() {
             >
               <div style={{ width: "100%", height: 300 }}>
                 <ResponsiveContainer>
-                  <BarChart data={growthAbs} margin={{ top: 12, right: 16, bottom: 48, left: 0 }}>
+                  <BarChart data={growthAbs} margin={{ top: 24, right: 16, bottom: 48, left: 0 }}>
                     <CartesianGrid vertical={false} stroke="#eef2f6" />
                     <XAxis
                       dataKey="institucion"
@@ -477,10 +509,11 @@ export function MercadoCompetencia() {
                     />
                     <YAxis hide />
                     <Tooltip content={<ChartTooltip formatter={(v) => fmt(v)} labelFormatter={() => null} />} cursor={{ fill: "rgba(31,178,222,0.06)" }} />
-                    <Bar dataKey="dif" name="Diferencia" radius={[4, 4, 0, 0]}>
+                    <Bar dataKey="dif" name="Diferencia" radius={[4, 4, 0, 0]} isAnimationActive={false}>
                       {growthAbs.map((d, i) => (
                         <Cell key={i} fill={d.dif >= 0 ? GOOD : CRITICAL} />
                       ))}
+                      <LabelList dataKey="dif" content={<GrowthBarLabel formatter={fmt} />} />
                     </Bar>
                   </BarChart>
                 </ResponsiveContainer>
@@ -489,50 +522,50 @@ export function MercadoCompetencia() {
           </div>
 
           <Card icon={Building2} title="Histórico y tendencia por competidor" subtitle={`vs. ${derived.prevYear} → ${derived.lastYear}`}>
-            <div className="overflow-x-auto scroll-thin rounded-xl border border-slate-200">
+            <div className="overflow-x-auto scroll-thin rounded-xl ring-1 ring-slate-200/70">
               <table className="w-full border-collapse text-[13.5px]">
                 <thead>
                   <tr className="bg-slate-50 text-[10.5px] font-semibold uppercase tracking-wide text-slate-500">
-                    <th className="px-3 py-2.5 text-left">Institución</th>
+                    <th className="px-3 py-1.5 text-left">Institución</th>
                     {derived.pivot.anios.map((a) => (
-                      <th key={a} className="px-3 py-2.5 text-right tabular-nums">
+                      <th key={a} className="px-3 py-1.5 text-right tabular-nums">
                         {a}
                       </th>
                     ))}
-                    <th className="px-3 py-2.5 text-right">
+                    <th className="px-3 py-1.5 text-right">
                       VAR {derived.pivot.lastYear} vs {derived.pivot.prevYear}
                     </th>
-                    <th className="px-3 py-2.5 text-right">
+                    <th className="px-3 py-1.5 text-right">
                       DIF {derived.pivot.lastYear} vs {derived.pivot.prevYear}
                     </th>
-                    <th className="px-3 py-2.5 text-left">Tendencia</th>
+                    <th className="px-3 py-1.5 text-left">Tendencia</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
                   <tr className="bg-brand-navy-50/70 font-semibold">
-                    <td className="px-3 py-2.5">Subtotal — {derived.pivot.totalCount} instituciones</td>
+                    <td className="px-3 py-1.5">Subtotal — {derived.pivot.totalCount} instituciones</td>
                     {derived.pivot.subtotal.values.map((v, i) => (
-                      <td key={i} className="px-3 py-2.5 text-right tabular-nums">
+                      <td key={i} className="px-3 py-1.5 text-right tabular-nums">
                         {fmt(v)}
                       </td>
                     ))}
-                    <td className="px-3 py-2.5 text-right">{derived.pivot.subtotal.varr == null ? "—" : <TrendBadge value={derived.pivot.subtotal.varr} />}</td>
-                    <td className="px-3 py-2.5 text-right tabular-nums">{fmt(derived.pivot.subtotal.dif)}</td>
-                    <td className="px-3 py-2.5">
+                    <td className="px-3 py-1.5 text-right">{derived.pivot.subtotal.varr == null ? "—" : <TrendBadge value={derived.pivot.subtotal.varr} />}</td>
+                    <td className="px-3 py-1.5 text-right tabular-nums">{fmt(derived.pivot.subtotal.dif)}</td>
+                    <td className="px-3 py-1.5">
                       <Sparkline values={derived.pivot.subtotal.values} />
                     </td>
                   </tr>
                   {derived.pivot.entries.map((e) => (
                     <tr key={e.row.institucion} className={isPoli(e.row.institucion) ? "bg-brand-cyan-50/40" : ""}>
-                      <td className="px-3 py-2.5">{e.row.institucion}</td>
+                      <td className="px-3 py-1.5">{e.row.institucion}</td>
                       {e.values.map((v, i) => (
-                        <td key={i} className="px-3 py-2.5 text-right tabular-nums">
+                        <td key={i} className="px-3 py-1.5 text-right tabular-nums">
                           {fmt(v)}
                         </td>
                       ))}
-                      <td className="px-3 py-2.5 text-right">{e.varr == null ? "—" : <TrendBadge value={e.varr} />}</td>
-                      <td className="px-3 py-2.5 text-right tabular-nums">{fmt(e.dif)}</td>
-                      <td className="px-3 py-2.5">
+                      <td className="px-3 py-1.5 text-right">{e.varr == null ? "—" : <TrendBadge value={e.varr} />}</td>
+                      <td className="px-3 py-1.5 text-right tabular-nums">{fmt(e.dif)}</td>
+                      <td className="px-3 py-1.5">
                         <Sparkline values={e.values} />
                       </td>
                     </tr>

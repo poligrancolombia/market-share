@@ -19,19 +19,19 @@ function KVTable({ title, rows, labelCol, labelHeader }) {
   return (
     <div>
       <h4 className="mb-2 text-[11.5px] font-semibold uppercase tracking-wide text-slate-500">{title}</h4>
-      <div className="overflow-x-auto scroll-thin rounded-xl border border-slate-200">
+      <div className="overflow-x-auto scroll-thin rounded-xl ring-1 ring-slate-200/70">
         <table className="w-full border-collapse text-[13px]">
           <thead>
             <tr className="bg-slate-50 text-[10.5px] font-semibold uppercase tracking-wide text-slate-500">
-              <th className="px-3 py-2 text-left">{labelHeader}</th>
-              <th className="px-3 py-2 text-right">Total</th>
+              <th className="px-3 py-1.5 text-left">{labelHeader}</th>
+              <th className="px-3 py-1.5 text-right">Total</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
             {rows.map((r, i) => (
               <tr key={i}>
-                <td className="px-3 py-2">{r[labelCol] ?? "Sin dato"}</td>
-                <td className="px-3 py-2 text-right tabular-nums">{fmt(r.total)}</td>
+                <td className="px-3 py-1.5">{r[labelCol] ?? "Sin dato"}</td>
+                <td className="px-3 py-1.5 text-right tabular-nums">{fmt(r.total)}</td>
               </tr>
             ))}
           </tbody>
@@ -93,7 +93,7 @@ export function Validacion() {
   }, [query, filters, poliName]);
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-5">
       <Card
         icon={ShieldCheck}
         title="Totales generales"
@@ -102,23 +102,23 @@ export function Validacion() {
         {!general ? (
           <div className="py-8 text-center text-sm text-slate-400">Cargando…</div>
         ) : (
-          <div className="overflow-x-auto scroll-thin rounded-xl border border-slate-200">
+          <div className="overflow-x-auto scroll-thin rounded-xl ring-1 ring-slate-200/70">
             <table className="w-full border-collapse text-[13.5px]">
               <thead>
                 <tr className="bg-slate-50 text-[10.5px] font-semibold uppercase tracking-wide text-slate-500">
-                  <th className="px-3 py-2.5 text-left">Métrica</th>
-                  <th className="px-3 py-2.5 text-right">Total nacional (2016-2024)</th>
-                  <th className="px-3 py-2.5 text-right">Total Poli</th>
-                  <th className="px-3 py-2.5 text-right">Participación Poli</th>
+                  <th className="px-3 py-1.5 text-left">Métrica</th>
+                  <th className="px-3 py-1.5 text-right">Total nacional (2016-2024)</th>
+                  <th className="px-3 py-1.5 text-right">Total Poli</th>
+                  <th className="px-3 py-1.5 text-right">Participación Poli</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {general.map((r) => (
                   <tr key={r.metrica}>
-                    <td className="px-3 py-2.5">{r.metrica === "matriculados" ? "Matriculados" : "Primer Curso"}</td>
-                    <td className="px-3 py-2.5 text-right tabular-nums">{fmt(r.total)}</td>
-                    <td className="px-3 py-2.5 text-right tabular-nums">{fmt(r.poli)}</td>
-                    <td className="px-3 py-2.5 text-right tabular-nums">{r.total ? pct(r.poli / r.total) : "—"}</td>
+                    <td className="px-3 py-1.5">{r.metrica === "matriculados" ? "Matriculados" : "Primer Curso"}</td>
+                    <td className="px-3 py-1.5 text-right tabular-nums">{fmt(r.total)}</td>
+                    <td className="px-3 py-1.5 text-right tabular-nums">{fmt(r.poli)}</td>
+                    <td className="px-3 py-1.5 text-right tabular-nums">{r.total ? pct(r.poli / r.total) : "—"}</td>
                   </tr>
                 ))}
               </tbody>

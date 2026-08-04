@@ -18,22 +18,26 @@ const EXCLUSION_NOTE = "No incluye Especialización Tecnológica, Médico Quirú
 // paleta fija (validada: 8 familias, orden fijo, nunca cíclica) -- cada
 // categoría de nivel/modalidad siempre lleva el mismo color, sin importar su
 // posición en el ranking. El residual de modalidad ("Sin información") va en
-// gris neutro, fuera de la paleta categórica.
-const NEUTRAL = "#94a3b8";
+// gris neutro, fuera de la paleta categórica. Reutiliza los mismos tonos
+// --color-series-* de marca que el resto de la app (antes eran colores
+// genéricos sueltos, sin relación con la paleta de Panorama/Histórico).
+const NEUTRAL = "#8a97a8";
 const NIVEL_COLORS = {
-  "Especializacion Universitaria": "#eda100",
-  Maestria: "#e87ba4",
-  Doctorado: "#008300",
-  Universitario: "#2a78d6",
-  Tecnologico: "#eb6834",
-  "Formacion Tecnica Profesional": "#1baf7a",
+  Universitario: "#0f385a",
+  "Especializacion Universitaria": "#f2a541",
+  Maestria: "#e0637c",
+  Tecnologico: "#1fb2de",
+  Doctorado: "#2fb88a",
+  "Formacion Tecnica Profesional": "#7c6fe0",
 };
+// mismos colores que MODALIDAD_COLORS de Panorama.jsx -- una modalidad
+// siempre se lee del mismo color en cualquier pestaña de la app.
 const MODALIDAD_COLORS = {
-  Presencial: "#2a78d6",
-  Virtual: "#eb6834",
-  "A distancia": "#1baf7a",
-  Hibrida: "#eda100",
-  Dual: "#e87ba4",
+  Presencial: "#0f385a",
+  Virtual: "#1fb2de",
+  "A distancia": "#d6336c",
+  Hibrida: "#f2a541",
+  Dual: "#7c6fe0",
   "Sin informacion": NEUTRAL,
 };
 
@@ -53,46 +57,33 @@ function CountPillLabel({ x, y, value, color }) {
   );
 }
 
-// etiqueta externa con línea guía -- nombre, cantidad y % de cada segmento,
-// como los donuts del tablero de origen.
-function DonutLabel({ cx, cy, midAngle, outerRadius, percent, label, value }) {
-  const RADIAN = Math.PI / 180;
-  const cos = Math.cos(-RADIAN * midAngle);
-  const sin = Math.sin(-RADIAN * midAngle);
-  const sx = cx + (outerRadius + 6) * cos;
-  const sy = cy + (outerRadius + 6) * sin;
-  const mx = cx + (outerRadius + 20) * cos;
-  const my = cy + (outerRadius + 20) * sin;
-  const ex = mx + (cos >= 0 ? 1 : -1) * 10;
-  const ey = my;
-  const anchor = cos >= 0 ? "start" : "end";
-  return (
-    <g>
-      <path d={`M${sx},${sy} L${mx},${my} L${ex},${ey}`} stroke="#cbd5e1" fill="none" />
-      <text x={ex + (cos >= 0 ? 4 : -4)} y={ey} textAnchor={anchor} dominantBaseline="central" fontSize={11.5} fill="#334155">
-        {`${label} ${fmt(value)} (${pct(percent)})`}
-      </text>
-    </g>
-  );
-}
-
+// leyenda tipo "chip" -- fila con punto de color, nombre, cantidad y %
+// alineados en columnas (antes era solo texto suelto envuelto, sin jerarquía
+// ni alineación numérica).
 function DonutLegend({ data, colors }) {
   return (
-    <div className="mt-2 flex flex-wrap justify-center gap-x-4 gap-y-1.5 text-xs text-slate-600">
+    <div className="mt-1 grid grid-cols-1 gap-1 sm:grid-cols-2">
       {data.map((d) => (
-        <span key={d.key} className="flex items-center gap-1.5">
-          <span className="h-2.5 w-2.5 rounded-full" style={{ background: colors[d.key] ?? NEUTRAL }} />
-          {d.label}
-        </span>
+        <div key={d.key} className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-[12.5px] transition-colors hover:bg-slate-50">
+          <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: colors[d.key] ?? NEUTRAL }} />
+          <span className="flex-1 truncate font-medium text-slate-600">{d.label}</span>
+          <span className="tabular-nums font-semibold text-brand-navy-900">{fmt(d.count)}</span>
+          <span className="w-12 text-right tabular-nums text-slate-400">{pct(d.pct)}</span>
+        </div>
       ))}
     </div>
   );
 }
 
+// donut premium: sin etiquetas externas con línea guía (se veían saturadas
+// y "planas") -- el total va grande en el centro, el detalle por segmento
+// vive en la leyenda de abajo (hover ahí resalta la porción) y en el tooltip.
 function DistributionDonut({ data, colors }) {
+  const total = data.reduce((s, d) => s + d.count, 0);
+  const [activeKey, setActiveKey] = useState(null);
   return (
     <div>
-      <div style={{ width: "100%", height: 300 }}>
+      <div className="relative" style={{ width: "100%", height: 280 }}>
         <ResponsiveContainer>
           <Donut>
             <Tooltip content={<ChartTooltip formatter={(v, name, p) => `${fmt(v)} (${pct(p.payload.pct)})`} />} />
@@ -100,19 +91,30 @@ function DistributionDonut({ data, colors }) {
               data={data}
               dataKey="count"
               nameKey="label"
-              innerRadius="52%"
-              outerRadius="72%"
-              paddingAngle={1.5}
-              label={<DonutLabel />}
-              labelLine={false}
+              innerRadius="62%"
+              outerRadius="92%"
+              paddingAngle={2}
+              cornerRadius={4}
+              stroke="none"
               isAnimationActive={false}
+              onMouseEnter={(_, i) => setActiveKey(data[i]?.key)}
+              onMouseLeave={() => setActiveKey(null)}
             >
               {data.map((d) => (
-                <Cell key={d.key} fill={colors[d.key] ?? NEUTRAL} />
+                <Cell
+                  key={d.key}
+                  fill={colors[d.key] ?? NEUTRAL}
+                  opacity={activeKey == null || activeKey === d.key ? 1 : 0.35}
+                  style={{ transition: "opacity 200ms" }}
+                />
               ))}
             </Pie>
           </Donut>
         </ResponsiveContainer>
+        <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
+          <span className="text-[26px] font-bold leading-none tracking-tight text-brand-navy-900">{fmt(total)}</span>
+          <span className="mt-1 text-[10.5px] font-semibold uppercase tracking-wide text-slate-400">programas</span>
+        </div>
       </div>
       <DonutLegend data={data} colors={colors} />
     </div>
@@ -182,13 +184,13 @@ export function Oferta() {
   }
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-5">
       <Card
         icon={Layers}
         title="Oferta de programas por nivel de formación"
         subtitle={`Programas (por código SNIES) con más de 2 matrículas ese año, por nivel de formación — ${EXCLUSION_NOTE}`}
       >
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
           <div>
             <div style={{ width: "100%", height: 340 }}>
               <ResponsiveContainer>
@@ -239,29 +241,29 @@ export function Oferta() {
             <p className="mb-3 text-xs text-slate-500">
               Matrícula por primera vez en {lastYear} (más de 2 matrículas, sin registro en ningún año anterior)
             </p>
-            <div className="overflow-x-auto scroll-thin rounded-xl border border-slate-200">
+            <div className="overflow-x-auto scroll-thin rounded-xl ring-1 ring-slate-200/70">
               <table className="w-full border-collapse text-[13px]">
                 <thead>
                   <tr className="bg-slate-50 text-[10px] font-semibold uppercase tracking-wide text-slate-500">
-                    <th className="px-2.5 py-2 text-left">Nivel</th>
+                    <th className="px-2.5 py-1.5 text-left">Nivel</th>
                     {nuevos.modalidades.map((m) => (
-                      <th key={m} className="px-2.5 py-2 text-right">
+                      <th key={m} className="px-2.5 py-1.5 text-right">
                         {m}
                       </th>
                     ))}
-                    <th className="px-2.5 py-2 text-right">Total</th>
+                    <th className="px-2.5 py-1.5 text-right">Total</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
                   {nuevos.rows.map((r) => (
                     <tr key={r.key} className="hover:bg-slate-50/80">
-                      <td className="px-2.5 py-2 font-medium text-brand-navy-900">{r.label}</td>
+                      <td className="px-2.5 py-1.5 font-medium text-brand-navy-900">{r.label}</td>
                       {r.cells.map((c, i) => (
-                        <td key={i} className="px-2.5 py-2 text-right tabular-nums text-slate-700">
+                        <td key={i} className="px-2.5 py-1.5 text-right tabular-nums text-slate-700">
                           {c || <span className="text-slate-300">—</span>}
                         </td>
                       ))}
-                      <td className="px-2.5 py-2 text-right font-semibold tabular-nums text-brand-navy-900">{r.total}</td>
+                      <td className="px-2.5 py-1.5 text-right font-semibold tabular-nums text-brand-navy-900">{r.total}</td>
                     </tr>
                   ))}
                   {!nuevos.rows.length && (
@@ -275,13 +277,13 @@ export function Oferta() {
                 {nuevos.rows.length > 0 && (
                   <tfoot>
                     <tr className="bg-brand-navy-50/70 font-semibold">
-                      <td className="px-2.5 py-2">Total</td>
+                      <td className="px-2.5 py-1.5">Total</td>
                       {nuevos.colTotals.map((c, i) => (
-                        <td key={i} className="px-2.5 py-2 text-right tabular-nums">
+                        <td key={i} className="px-2.5 py-1.5 text-right tabular-nums">
                           {c}
                         </td>
                       ))}
-                      <td className="px-2.5 py-2 text-right tabular-nums">{nuevos.grandTotal}</td>
+                      <td className="px-2.5 py-1.5 text-right tabular-nums">{nuevos.grandTotal}</td>
                     </tr>
                   </tfoot>
                 )}
@@ -291,7 +293,7 @@ export function Oferta() {
         </div>
       </Card>
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
         <Card icon={PieChart} title="Distribución por nivel de formación" subtitle={`Programas en oferta en ${lastYear} — ${EXCLUSION_NOTE}`}>
           <DistributionDonut data={nivelDist} colors={NIVEL_COLORS} />
         </Card>
@@ -302,27 +304,27 @@ export function Oferta() {
       </div>
 
       <Card icon={Sparkles} title="Top 10 con mejor debut" subtitle={`Programas con matrícula en ${lastYear} que no registraban en ningún año anterior`}>
-        <div className="overflow-x-auto scroll-thin rounded-xl border border-slate-200">
+        <div className="overflow-x-auto scroll-thin rounded-xl ring-1 ring-slate-200/70">
           <table className="w-full border-collapse text-[13px]">
             <thead>
               <tr className="bg-slate-50 text-[10.5px] font-semibold uppercase tracking-wide text-slate-500">
-                <th className="px-3 py-2.5 text-left">Top</th>
-                <th className="px-3 py-2.5 text-left">SNIES</th>
-                <th className="px-3 py-2.5 text-left">Programa</th>
-                <th className="px-3 py-2.5 text-left">Modalidad</th>
-                <th className="px-3 py-2.5 text-left">IES</th>
-                <th className="px-3 py-2.5 text-right">Nuevos {lastYear}</th>
+                <th className="px-3 py-1.5 text-left">Top</th>
+                <th className="px-3 py-1.5 text-left">SNIES</th>
+                <th className="px-3 py-1.5 text-left">Programa</th>
+                <th className="px-3 py-1.5 text-left">Modalidad</th>
+                <th className="px-3 py-1.5 text-left">IES</th>
+                <th className="px-3 py-1.5 text-right">Nuevos {lastYear}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {programTables.debut.map((p, i) => (
                 <tr key={p.codigo}>
-                  <td className="px-3 py-2.5 tabular-nums text-slate-400">{i + 1}</td>
-                  <td className="px-3 py-2.5 tabular-nums text-slate-500">{p.codigo}</td>
-                  <td className="px-3 py-2.5">{p.programa}</td>
-                  <td className="px-3 py-2.5 text-slate-500">{p.modalidad}</td>
-                  <td className="px-3 py-2.5 text-slate-500">{p.institucion}</td>
-                  <td className="px-3 py-2.5 text-right font-semibold tabular-nums text-emerald-600">+{fmt(p.nuevos)}</td>
+                  <td className="px-3 py-1.5 tabular-nums text-slate-400">{i + 1}</td>
+                  <td className="px-3 py-1.5 tabular-nums text-slate-500">{p.codigo}</td>
+                  <td className="px-3 py-1.5">{p.programa}</td>
+                  <td className="px-3 py-1.5 text-slate-500">{p.modalidad}</td>
+                  <td className="px-3 py-1.5 text-slate-500">{p.institucion}</td>
+                  <td className="px-3 py-1.5 text-right font-semibold tabular-nums text-emerald-600">+{fmt(p.nuevos)}</td>
                 </tr>
               ))}
               {!programTables.debut.length && (
@@ -338,33 +340,33 @@ export function Oferta() {
       </Card>
 
       <Card icon={TrendingUp} title="Top 10 con mayor crecimiento" subtitle={`Programas por SNIES, mayor diferencia absoluta de matrícula ${prevYear} → ${lastYear}`}>
-        <div className="overflow-x-auto scroll-thin rounded-xl border border-slate-200">
+        <div className="overflow-x-auto scroll-thin rounded-xl ring-1 ring-slate-200/70">
           <table className="w-full border-collapse text-[13px]">
             <thead>
               <tr className="bg-slate-50 text-[10.5px] font-semibold uppercase tracking-wide text-slate-500">
-                <th className="px-3 py-2.5 text-left">Top</th>
-                <th className="px-3 py-2.5 text-left">SNIES</th>
-                <th className="px-3 py-2.5 text-left">Programa</th>
-                <th className="px-3 py-2.5 text-left">Modalidad</th>
-                <th className="px-3 py-2.5 text-left">IES</th>
-                <th className="px-3 py-2.5 text-right">{prevYear}</th>
-                <th className="px-3 py-2.5 text-right">{lastYear}</th>
-                <th className="px-3 py-2.5 text-right">Dif.</th>
-                <th className="px-3 py-2.5 text-right">%</th>
+                <th className="px-3 py-1.5 text-left">Top</th>
+                <th className="px-3 py-1.5 text-left">SNIES</th>
+                <th className="px-3 py-1.5 text-left">Programa</th>
+                <th className="px-3 py-1.5 text-left">Modalidad</th>
+                <th className="px-3 py-1.5 text-left">IES</th>
+                <th className="px-3 py-1.5 text-right">{prevYear}</th>
+                <th className="px-3 py-1.5 text-right">{lastYear}</th>
+                <th className="px-3 py-1.5 text-right">Dif.</th>
+                <th className="px-3 py-1.5 text-right">%</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {programTables.growers.map((p, i) => (
                 <tr key={p.codigo}>
-                  <td className="px-3 py-2.5 tabular-nums text-slate-400">{i + 1}</td>
-                  <td className="px-3 py-2.5 tabular-nums text-slate-500">{p.codigo}</td>
-                  <td className="px-3 py-2.5">{p.programa}</td>
-                  <td className="px-3 py-2.5 text-slate-500">{p.modalidad}</td>
-                  <td className="px-3 py-2.5 text-slate-500">{p.institucion}</td>
-                  <td className="px-3 py-2.5 text-right tabular-nums">{fmt(p.prev)}</td>
-                  <td className="px-3 py-2.5 text-right tabular-nums">{fmt(p.last)}</td>
-                  <td className="px-3 py-2.5 text-right font-semibold tabular-nums text-emerald-600">+{fmt(p.dif)}</td>
-                  <td className="px-3 py-2.5 text-right">{p.growth == null ? "—" : <TrendBadge value={p.growth} />}</td>
+                  <td className="px-3 py-1.5 tabular-nums text-slate-400">{i + 1}</td>
+                  <td className="px-3 py-1.5 tabular-nums text-slate-500">{p.codigo}</td>
+                  <td className="px-3 py-1.5">{p.programa}</td>
+                  <td className="px-3 py-1.5 text-slate-500">{p.modalidad}</td>
+                  <td className="px-3 py-1.5 text-slate-500">{p.institucion}</td>
+                  <td className="px-3 py-1.5 text-right tabular-nums">{fmt(p.prev)}</td>
+                  <td className="px-3 py-1.5 text-right tabular-nums">{fmt(p.last)}</td>
+                  <td className="px-3 py-1.5 text-right font-semibold tabular-nums text-emerald-600">+{fmt(p.dif)}</td>
+                  <td className="px-3 py-1.5 text-right">{p.growth == null ? "—" : <TrendBadge value={p.growth} />}</td>
                 </tr>
               ))}
             </tbody>
@@ -373,33 +375,33 @@ export function Oferta() {
       </Card>
 
       <Card icon={TrendingDown} title="Top 10 que más decrecen" subtitle={`Programas por SNIES, mayor caída absoluta de matrícula ${prevYear} → ${lastYear}`}>
-        <div className="overflow-x-auto scroll-thin rounded-xl border border-slate-200">
+        <div className="overflow-x-auto scroll-thin rounded-xl ring-1 ring-slate-200/70">
           <table className="w-full border-collapse text-[13px]">
             <thead>
               <tr className="bg-slate-50 text-[10.5px] font-semibold uppercase tracking-wide text-slate-500">
-                <th className="px-3 py-2.5 text-left">Top</th>
-                <th className="px-3 py-2.5 text-left">SNIES</th>
-                <th className="px-3 py-2.5 text-left">Programa</th>
-                <th className="px-3 py-2.5 text-left">Modalidad</th>
-                <th className="px-3 py-2.5 text-left">IES</th>
-                <th className="px-3 py-2.5 text-right">{prevYear}</th>
-                <th className="px-3 py-2.5 text-right">{lastYear}</th>
-                <th className="px-3 py-2.5 text-right">Dif.</th>
-                <th className="px-3 py-2.5 text-right">%</th>
+                <th className="px-3 py-1.5 text-left">Top</th>
+                <th className="px-3 py-1.5 text-left">SNIES</th>
+                <th className="px-3 py-1.5 text-left">Programa</th>
+                <th className="px-3 py-1.5 text-left">Modalidad</th>
+                <th className="px-3 py-1.5 text-left">IES</th>
+                <th className="px-3 py-1.5 text-right">{prevYear}</th>
+                <th className="px-3 py-1.5 text-right">{lastYear}</th>
+                <th className="px-3 py-1.5 text-right">Dif.</th>
+                <th className="px-3 py-1.5 text-right">%</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {programTables.decliners.map((p, i) => (
                 <tr key={p.codigo}>
-                  <td className="px-3 py-2.5 tabular-nums text-slate-400">{i + 1}</td>
-                  <td className="px-3 py-2.5 tabular-nums text-slate-500">{p.codigo}</td>
-                  <td className="px-3 py-2.5">{p.programa}</td>
-                  <td className="px-3 py-2.5 text-slate-500">{p.modalidad}</td>
-                  <td className="px-3 py-2.5 text-slate-500">{p.institucion}</td>
-                  <td className="px-3 py-2.5 text-right tabular-nums">{fmt(p.prev)}</td>
-                  <td className="px-3 py-2.5 text-right tabular-nums">{fmt(p.last)}</td>
-                  <td className="px-3 py-2.5 text-right font-semibold tabular-nums text-rose-600">{fmt(p.dif)}</td>
-                  <td className="px-3 py-2.5 text-right">{p.growth == null ? "—" : <TrendBadge value={p.growth} />}</td>
+                  <td className="px-3 py-1.5 tabular-nums text-slate-400">{i + 1}</td>
+                  <td className="px-3 py-1.5 tabular-nums text-slate-500">{p.codigo}</td>
+                  <td className="px-3 py-1.5">{p.programa}</td>
+                  <td className="px-3 py-1.5 text-slate-500">{p.modalidad}</td>
+                  <td className="px-3 py-1.5 text-slate-500">{p.institucion}</td>
+                  <td className="px-3 py-1.5 text-right tabular-nums">{fmt(p.prev)}</td>
+                  <td className="px-3 py-1.5 text-right tabular-nums">{fmt(p.last)}</td>
+                  <td className="px-3 py-1.5 text-right font-semibold tabular-nums text-rose-600">{fmt(p.dif)}</td>
+                  <td className="px-3 py-1.5 text-right">{p.growth == null ? "—" : <TrendBadge value={p.growth} />}</td>
                 </tr>
               ))}
             </tbody>

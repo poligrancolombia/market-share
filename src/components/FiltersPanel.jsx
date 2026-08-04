@@ -18,8 +18,8 @@ export function FiltersPanel({ hint }) {
 
   return (
     <Card icon={SlidersHorizontal} title="Filtros" subtitle={hint ?? "Aplican a todas las pestañas — cada uno se ajusta según los demás."}>
-      <div className="mb-4 inline-flex items-center gap-3 rounded-xl border border-brand-cyan-200 bg-brand-cyan-50/70 px-4 py-2.5">
-        <span className="text-[11px] font-semibold uppercase tracking-wide text-brand-cyan">Métrica</span>
+      <div className="mb-4 inline-flex items-center gap-2.5 rounded-full bg-brand-cyan-50/70 px-3.5 py-2 ring-1 ring-inset ring-brand-cyan-200/70">
+        <span className="text-[10.5px] font-semibold uppercase tracking-wide text-brand-cyan">Métrica</span>
         <RadioGroup
           options={[
             { value: "matriculados", label: "Matriculados" },
@@ -30,7 +30,7 @@ export function FiltersPanel({ hint }) {
         />
       </div>
 
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-8">
+      <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-8">
         <Select label="Año" value={filters.anio} onChange={(v) => setFilter("anio", v)} options={options.anio ?? []} blankLabel="Todos" />
         <Select
           label="Semestre"
