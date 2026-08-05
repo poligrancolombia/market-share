@@ -130,7 +130,7 @@ export function DuckDBProvider({ decryptKey, children }) {
           setState({
             ready: true,
             error: null,
-            message: `Datos cargados: ${Number(n).toLocaleString("es-CO")} registros, esquema estrella nacional 2016-2024.`,
+            message: `Datos cargados: ${Number(n).toLocaleString("es-CO")} registros, esquema estrella nacional 2016-2025.`,
           });
         }
       } catch (err) {

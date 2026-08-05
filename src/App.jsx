@@ -49,7 +49,7 @@ function Shell() {
         </div>
         <div>
           <h1 className="text-xl font-bold tracking-tight text-brand-navy-900">Market Share — Educación Superior</h1>
-          <p className="text-[13px] text-slate-500">SNIES 2016-2024, mercado nacional completo · Politécnico Grancolombiano vs. competencia</p>
+          <p className="text-[13px] text-slate-500">SNIES 2016-2025, mercado nacional completo · Politécnico Grancolombiano vs. competencia</p>
         </div>
       </header>
 

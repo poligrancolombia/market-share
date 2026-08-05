@@ -332,7 +332,7 @@ export function PerfilIES() {
   // oferta vigente ("Programas.xlsx", cubre TODAS las IES -- no es
   // oferta_poli, que es solo el catálogo propio del Poli) para esta
   // institución, con código SNIES > SNIES_NUEVO_MIN, que NUNCA registraron
-  // matrícula en el histórico 2016-2024 -- candidatos a nuevo lanzamiento.
+  // matrícula en el histórico 2016-2025 -- candidatos a nuevo lanzamiento.
   // grupo_homologo (columna "COMPETENCIA TOTAL" de Programas.xlsx) marca si
   // ese programa nuevo está homologado a algún programa del Poli.
   useEffect(() => {
@@ -532,7 +532,7 @@ export function PerfilIES() {
             <Card
               icon={Sparkles}
               title="Programas nuevos 2026 (sin matrícula histórica)"
-              subtitle={`Catálogo nacional de oferta vigente, código SNIES > ${fmt(SNIES_NUEVO_MIN)}, sin matrícula en el histórico 2016-2024`}
+              subtitle={`Catálogo nacional de oferta vigente, código SNIES > ${fmt(SNIES_NUEVO_MIN)}, sin matrícula en el histórico 2016-2025`}
             >
               <Nuevos2026Table items={nuevos2026} />
             </Card>

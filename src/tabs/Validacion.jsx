@@ -97,7 +97,7 @@ export function Validacion() {
       <Card
         icon={ShieldCheck}
         title="Totales generales"
-        subtitle="Todo el histórico 2016-2024, sin ningún filtro — para cruzar contra SNIES u otra fuente externa."
+        subtitle="Todo el histórico 2016-2025, sin ningún filtro — para cruzar contra SNIES u otra fuente externa."
       >
         {!general ? (
           <div className="py-8 text-center text-sm text-slate-400">Cargando…</div>
@@ -107,7 +107,7 @@ export function Validacion() {
               <thead>
                 <tr className="bg-slate-50 text-[10.5px] font-semibold uppercase tracking-wide text-slate-500">
                   <th className="px-3 py-1.5 text-left">Métrica</th>
-                  <th className="px-3 py-1.5 text-right">Total nacional (2016-2024)</th>
+                  <th className="px-3 py-1.5 text-right">Total nacional (2016-2025)</th>
                   <th className="px-3 py-1.5 text-right">Total Poli</th>
                   <th className="px-3 py-1.5 text-right">Participación Poli</th>
                 </tr>
