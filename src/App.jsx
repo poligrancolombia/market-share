@@ -54,7 +54,7 @@ function Shell() {
             <p className="text-[13px] text-slate-500">SNIES 2016-2025, mercado nacional completo · Politécnico Grancolombiano vs. competencia</p>
           </div>
         </div>
-        <img src={logo} alt="Politécnico Grancolombiano" className="h-10 w-auto shrink-0" />
+        <img src={logo} alt="Politécnico Grancolombiano" className="h-16 w-auto shrink-0" />
       </header>
 
       <StatusBar />
