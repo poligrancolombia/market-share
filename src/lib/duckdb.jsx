@@ -86,7 +86,12 @@ export function DuckDBProvider({ decryptKey, children }) {
             p.codigo_snies_programa,
             p.programa_academico,
             p.grupo_homologo, p.competencia_directa,
-            p.departamento_programa, p.municipio_programa,
+            -- departamento/municipio vienen del HECHO (lo que reportó la IES
+            -- esa matrícula ese año), no de dim_programa (que solo tiene la
+            -- característica ACTUAL del programa, snapshot de Programas.xlsx)
+            -- -- un programa Presencial puede haberse dictado en otra sede en
+            -- años anteriores, y eso es lo que definió esa matrícula puntual.
+            h.departamento_programa, h.municipio_programa,
             h.nivel_academico, h.metodologia,
             -- el dato fuente trae "nivel_formacion" con mayúsculas/minúsculas
             -- inconsistentes (ej. "Especializacion Universitaria" vs.
