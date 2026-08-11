@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { BarChart3, LineChart, Swords, Table2, Telescope, Layers, UserSquare2, CheckCircle2, Loader2, AlertTriangle } from "lucide-react";
+import logo from "./assets/logo.png";
 import { useDuckDB } from "./lib/duckdb";
 import { AuthGate } from "./components/AuthGate";
 import { FiltersProvider } from "./state/FiltersContext";
@@ -43,14 +44,17 @@ function Shell() {
 
   return (
     <div className="mx-auto max-w-[1440px] px-6 py-8 lg:px-10">
-      <header className="mb-6 flex items-center gap-3">
-        <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-brand-navy-900 text-white shadow-[var(--shadow-glow)]">
-          <BarChart3 size={20} />
+      <header className="mb-6 flex items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-brand-navy-900 text-white shadow-[var(--shadow-glow)]">
+            <BarChart3 size={20} />
+          </div>
+          <div>
+            <h1 className="text-xl font-bold tracking-tight text-brand-navy-900">Market Share — Educación Superior</h1>
+            <p className="text-[13px] text-slate-500">SNIES 2016-2025, mercado nacional completo · Politécnico Grancolombiano vs. competencia</p>
+          </div>
         </div>
-        <div>
-          <h1 className="text-xl font-bold tracking-tight text-brand-navy-900">Market Share — Educación Superior</h1>
-          <p className="text-[13px] text-slate-500">SNIES 2016-2025, mercado nacional completo · Politécnico Grancolombiano vs. competencia</p>
-        </div>
+        <img src={logo} alt="Politécnico Grancolombiano" className="h-10 w-auto shrink-0" />
       </header>
 
       <StatusBar />
