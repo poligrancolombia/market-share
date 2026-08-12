@@ -13,34 +13,40 @@ export const TEXT_FILTERS = [
 
 const DEFAULT_FILTERS = {
   metrica: "matriculados",
-  anio: "",
-  semestre: "",
-  nivelAcademico: "",
-  sector: "",
-  nivelFormacion: "",
-  metodologia: "",
-  departamento: "",
-  municipio: "",
+  anio: [],
+  semestre: [],
+  nivelAcademico: [],
+  sector: [],
+  nivelFormacion: [],
+  metodologia: [],
+  departamento: [],
+  municipio: [],
 };
 
 // -- constructores de WHERE, puros (reciben el objeto de filtros, no leen contexto) --
+// cada filtro ahora es una LISTA de valores seleccionados (antes uno solo) --
+// vacía = "Todos"/sin filtrar, 1+ valores = OR entre ellos (col IN (...)).
+export function sqlIn(col, values) {
+  return values?.length ? ` AND ${col} IN (${values.map((v) => `'${esc(v)}'`).join(",")})` : "";
+}
+export function sqlInNum(col, values) {
+  return values?.length ? ` AND ${col} IN (${values.join(",")})` : "";
+}
 export function whereCommon(s) {
   let w = `metrica = '${s.metrica}'`;
-  if (s.semestre) w += ` AND semestre = ${s.semestre}`;
-  for (const { key, col } of TEXT_FILTERS) {
-    if (s[key]) w += ` AND ${col} = '${esc(s[key])}'`;
-  }
+  w += sqlInNum("semestre", s.semestre);
+  for (const { key, col } of TEXT_FILTERS) w += sqlIn(col, s[key]);
   return w;
 }
 export function whereBase(s) {
-  return s.anio ? `${whereCommon(s)} AND anio = ${s.anio}` : whereCommon(s);
+  return `${whereCommon(s)}${sqlInNum("anio", s.anio)}`;
 }
 export function whereExcluding(s, excludeKey) {
   let w = `metrica = '${s.metrica}'`;
-  if (excludeKey !== "anio" && s.anio) w += ` AND anio = ${s.anio}`;
-  if (excludeKey !== "semestre" && s.semestre) w += ` AND semestre = ${s.semestre}`;
+  if (excludeKey !== "anio") w += sqlInNum("anio", s.anio);
+  if (excludeKey !== "semestre") w += sqlInNum("semestre", s.semestre);
   for (const { key, col } of TEXT_FILTERS) {
-    if (key !== excludeKey && s[key]) w += ` AND ${col} = '${esc(s[key])}'`;
+    if (key !== excludeKey) w += sqlIn(col, s[key]);
   }
   return w;
 }
@@ -71,25 +77,39 @@ export function FiltersProvider({ children }) {
       }
       setOptions(next);
 
-      // si la selección actual quedó fuera del nuevo conjunto válido, se limpia
-      // (vuelve a "Todos") -- excepto año, que cae al más reciente disponible.
+      // el updater de setFilters debe ser puro (React en StrictMode lo llama
+      // 2 veces para detectar justo esto: si mutara initialized.current aquí
+      // dentro, la 2a llamada vería la ref ya en true y descartaría el
+      // resultado bueno de la 1a -- por eso se decide y se marca ANTES de
+      // entrar al updater, no dentro).
+      const shouldDefaultAnio = next.anio.length > 0 && !initialized.current;
+      initialized.current = true;
+
+      // si alguna de las seleccionadas quedó fuera del nuevo conjunto válido,
+      // se descarta solo esa (las demás siguen filtrando) -- año, si queda en
+      // cero, cae al más reciente disponible (arranque inicial también).
       setFilters((f) => {
         const patched = { ...f };
         let changed = false;
-        if (f.anio && !next.anio.some((a) => String(a) === String(f.anio))) {
-          patched.anio = next.anio.length ? String(next.anio[next.anio.length - 1]) : "";
-          changed = true;
-        } else if (!f.anio && next.anio.length && !initialized.current) {
-          patched.anio = String(next.anio[next.anio.length - 1]);
+        if (f.anio.length) {
+          const valid = f.anio.filter((a) => next.anio.some((n) => String(n) === String(a)));
+          if (valid.length !== f.anio.length) {
+            patched.anio = valid.length ? valid : next.anio.length ? [String(next.anio[next.anio.length - 1])] : [];
+            changed = true;
+          }
+        } else if (shouldDefaultAnio) {
+          patched.anio = [String(next.anio[next.anio.length - 1])];
           changed = true;
         }
         for (const { key } of TEXT_FILTERS) {
-          if (f[key] && !next[key].some((v) => String(v) === String(f[key]))) {
-            patched[key] = "";
-            changed = true;
+          if (f[key].length) {
+            const valid = f[key].filter((v) => next[key].some((n) => String(n) === String(v)));
+            if (valid.length !== f[key].length) {
+              patched[key] = valid;
+              changed = true;
+            }
           }
         }
-        initialized.current = true;
         return changed ? patched : f;
       });
     },

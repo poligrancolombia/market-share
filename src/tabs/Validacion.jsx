@@ -7,10 +7,13 @@ import { Card } from "../components/ui/Card";
 import { KpiTile } from "../components/ui/KpiBadge";
 
 function describeSegment(filters) {
-  const parts = [`Métrica: ${filters.metrica === "matriculados" ? "Matriculados" : "Primer Curso"}`, `Año: ${filters.anio || "Todos"}`];
-  if (filters.semestre) parts.push(`Semestre: ${filters.semestre}`);
+  const parts = [
+    `Métrica: ${filters.metrica === "matriculados" ? "Matriculados" : "Primer Curso"}`,
+    `Año: ${filters.anio?.length ? filters.anio.join(", ") : "Todos"}`,
+  ];
+  if (filters.semestre?.length) parts.push(`Semestre: ${filters.semestre.join(", ")}`);
   for (const { key, label } of TEXT_FILTERS) {
-    if (filters[key]) parts.push(`${label}: ${filters[key]}`);
+    if (filters[key]?.length) parts.push(`${label}: ${filters[key].join(", ")}`);
   }
   return parts.join(" · ");
 }

@@ -1,5 +1,5 @@
 import { esc, NIVEL_FORMACION_ORDER, NIVEL_ACADEMICO_ORDER, MODALIDAD_ORDER } from "./format";
-import { TEXT_FILTERS } from "../state/FiltersContext";
+import { TEXT_FILTERS, sqlIn, sqlInNum } from "../state/FiltersContext";
 
 function orderIndex(order, value) {
   const i = order.indexOf(value);
@@ -12,10 +12,8 @@ function orderIndex(order, value) {
 // Primer Curso y Matriculados juntos en una sola consulta y se separan en JS.
 export function whereInstitucion(filters, institucion) {
   let w = `institucion = '${esc(institucion)}'`;
-  if (filters.semestre) w += ` AND semestre = ${filters.semestre}`;
-  for (const { key, col } of TEXT_FILTERS) {
-    if (filters[key]) w += ` AND ${col} = '${esc(filters[key])}'`;
-  }
+  w += sqlInNum("semestre", filters.semestre);
+  for (const { key, col } of TEXT_FILTERS) w += sqlIn(col, filters[key]);
   return w;
 }
 
@@ -26,7 +24,7 @@ export function whereInstitucion(filters, institucion) {
 // es semestre 2 -- se aplica solo si el usuario no fijó ya un semestre
 // explícito en los filtros globales (en ese caso se respeta su elección).
 export function applyMatriculadosCutoff(rows, filters) {
-  if (filters.semestre) return rows;
+  if (filters.semestre?.length) return rows;
   return rows.filter((r) => r.metrica !== "matriculados" || Number(r.semestre) === 2);
 }
 

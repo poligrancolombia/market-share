@@ -1,7 +1,7 @@
 import { SlidersHorizontal } from "lucide-react";
 import { useFilters, TEXT_FILTERS } from "../state/FiltersContext";
 import { formatNivel, formatModalidad } from "../lib/format";
-import { Select } from "./ui/Select";
+import { MultiSelect } from "./ui/MultiSelect";
 import { RadioGroup } from "./ui/Tabs";
 import { Card } from "./ui/Card";
 
@@ -17,22 +17,27 @@ export function FiltersPanel({ hint }) {
   const { filters, setFilter, options } = useFilters();
 
   return (
-    <Card icon={SlidersHorizontal} title="Filtros" subtitle={hint ?? "Aplican a todas las pestañas — cada uno se ajusta según los demás."}>
-      <div className="mb-4 inline-flex items-center gap-2.5 rounded-full bg-brand-cyan-50/70 px-3.5 py-2 ring-1 ring-inset ring-brand-cyan-200/70">
-        <span className="text-[10.5px] font-semibold uppercase tracking-wide text-brand-cyan">Métrica</span>
-        <RadioGroup
-          options={[
-            { value: "matriculados", label: "Matriculados" },
-            { value: "primer_curso", label: "Primer Curso" },
-          ]}
-          value={filters.metrica}
-          onChange={(v) => setFilter("metrica", v)}
-        />
-      </div>
-
-      <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-8">
-        <Select label="Año" value={filters.anio} onChange={(v) => setFilter("anio", v)} options={options.anio ?? []} blankLabel="Todos" />
-        <Select
+    <Card
+      icon={SlidersHorizontal}
+      title="Filtros"
+      subtitle={hint ?? "Aplican a todas las pestañas — cada uno se ajusta según los demás."}
+      action={
+        <div className="inline-flex shrink-0 items-center gap-2.5 rounded-full bg-brand-cyan-50/70 px-3.5 py-2 ring-1 ring-inset ring-brand-cyan-200/70">
+          <span className="text-[10.5px] font-semibold uppercase tracking-wide text-brand-cyan">Métrica</span>
+          <RadioGroup
+            options={[
+              { value: "matriculados", label: "Matriculados" },
+              { value: "primer_curso", label: "Primer Curso" },
+            ]}
+            value={filters.metrica}
+            onChange={(v) => setFilter("metrica", v)}
+          />
+        </div>
+      }
+    >
+      <div className="mt-1 grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-8">
+        <MultiSelect label="Año" value={filters.anio} onChange={(v) => setFilter("anio", v)} options={options.anio ?? []} blankLabel="Todos" />
+        <MultiSelect
           label="Semestre"
           value={filters.semestre}
           onChange={(v) => setFilter("semestre", v)}
@@ -43,7 +48,7 @@ export function FiltersPanel({ hint }) {
           blankLabel="Ambos"
         />
         {TEXT_FILTERS.map((f) => (
-          <Select
+          <MultiSelect
             key={f.key}
             label={f.label}
             value={filters[f.key]}

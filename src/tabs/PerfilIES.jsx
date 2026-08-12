@@ -545,7 +545,7 @@ export function PerfilIES() {
             <Card
               icon={TrendingUp}
               title="Por nivel y modalidad — Totales (Matriculados)"
-              subtitle={`${derived.prevYear} vs ${derived.lastYear}${filters.semestre ? "" : " · corte semestre 2"}`}
+              subtitle={`${derived.prevYear} vs ${derived.lastYear}${filters.semestre?.length ? "" : " · corte semestre 2"}`}
             >
               <NivelModalidadTable resumen={derived.totalesResumen} detalle={derived.totalesDetalle} lastYear={derived.lastYear} prevYear={derived.prevYear} />
             </Card>
