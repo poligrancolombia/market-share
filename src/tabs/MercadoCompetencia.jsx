@@ -183,6 +183,11 @@ export function MercadoCompetencia() {
   // propedéutico, convenio) por institución -- una fila por sede que ofrece
   // un programa homologado a este grupo. No depende de la métrica/filtros
   // globales: es información propia del programa, no de la matrícula.
+  // Una institución puede tener MÁS DE UN programa propio en el mismo grupo
+  // (ej. una versión vieja/inactiva y la vigente) -- en vez de MAX() entre
+  // todos (que mezclaba características de programas distintos), se elige
+  // UNO solo por institución: el que esté "Activo"; si hay empate o ninguno
+  // lo está, el de código SNIES más alto (más reciente).
   useEffect(() => {
     if (!grupo) {
       setDetalle([]);
@@ -191,17 +196,20 @@ export function MercadoCompetencia() {
     let cancelled = false;
     (async () => {
       const r = await query(`
-        SELECT
-          i.institucion,
-          MAX(p.duracion_periodos) AS duracion_periodos,
-          MAX(p.creditos) AS creditos,
-          MAX(p.reconocimiento_ministerio) AS reconocimiento_ministerio,
-          BOOL_OR(p.ciclos_propedeuticos) AS ciclos_propedeuticos,
-          BOOL_OR(p.programa_en_convenio) AS programa_en_convenio
-        FROM dim_programa p
-        JOIN dim_institucion i ON p.codigo_institucion = i.codigo_institucion
-        WHERE p.grupo_homologo = ${grupo}
-        GROUP BY i.institucion
+        SELECT institucion, duracion_periodos, creditos, reconocimiento_ministerio, ciclos_propedeuticos, programa_en_convenio
+        FROM (
+          SELECT
+            i.institucion,
+            p.duracion_periodos, p.creditos, p.reconocimiento_ministerio, p.ciclos_propedeuticos, p.programa_en_convenio,
+            ROW_NUMBER() OVER (
+              PARTITION BY i.institucion
+              ORDER BY CASE WHEN p.estado_programa = 'Activo' THEN 0 ELSE 1 END, p.codigo_snies_programa DESC
+            ) AS rn
+          FROM dim_programa p
+          JOIN dim_institucion i ON p.codigo_institucion = i.codigo_institucion
+          WHERE p.grupo_homologo = ${grupo}
+        )
+        WHERE rn = 1
       `);
       if (!cancelled) setDetalle(r);
     })();
