@@ -223,22 +223,6 @@ function PillLabel({ x, y, value, color }) {
   );
 }
 
-// etiqueta de valor centrada EN cada punto de una línea -- cuando dos series
-// quedan tan cerca que sus etiquetas se encimarían (p.ej. Oficial/Privado
-// cruzando ~50%), se separan lo mínimo necesario para que se puedan leer,
-// en vez de flotar muy por encima del punto como antes.
-function LineValueLabel({ x, y, value, index, data, otherKey, color }) {
-  if (value == null) return null;
-  const otherValue = data?.[index]?.[otherKey];
-  const close = otherValue != null && Math.abs(value - otherValue) < 0.03;
-  const dy = close ? (value >= otherValue ? -6 : 13) : 3.5;
-  return (
-    <text x={x} y={y + dy} textAnchor="middle" fontSize={11} fontWeight={700} fill={color}>
-      {pct(value)}
-    </text>
-  );
-}
-
 // etiqueta sobre cada barra Mercado/Poli: valor total + crecimiento
 // interanual coloreado (se omite el % en el primer año, sin año anterior).
 // Poli va alineada a la derecha y desplazada fuera de la barra -- al ser tan
@@ -600,21 +584,18 @@ export function Panorama() {
                 <YAxis hide domain={["dataMin - 0.05", "dataMax + 0.05"]} />
                 <Tooltip content={<ChartTooltip formatter={(v) => pct(v)} />} cursor={{ stroke: "#cbd5e1", strokeWidth: 1 }} />
                 <Legend wrapperStyle={{ fontSize: 12 }} />
-                {sectorEvo.sectors.map((s) => {
-                  const otherKey = sectorEvo.sectors.find((x) => x !== s);
-                  return (
-                    <Line
-                      key={s}
-                      type="monotone"
-                      dataKey={s}
-                      name={s}
-                      stroke={SECTOR_COLORS[s] ?? "#94a3b8"}
-                      strokeWidth={2.5}
-                      dot={{ r: 3.5, fill: SECTOR_COLORS[s] ?? "#94a3b8", strokeWidth: 0 }}
-                      label={(p) => <LineValueLabel {...p} data={sectorEvo.share} otherKey={otherKey} color={SECTOR_COLORS[s] ?? "#94a3b8"} />}
-                    />
-                  );
-                })}
+                {sectorEvo.sectors.map((s) => (
+                  <Line
+                    key={s}
+                    type="monotone"
+                    dataKey={s}
+                    name={s}
+                    stroke={SECTOR_COLORS[s] ?? "#94a3b8"}
+                    strokeWidth={2.5}
+                    dot={{ r: 3.5, fill: SECTOR_COLORS[s] ?? "#94a3b8", strokeWidth: 0 }}
+                    label={<PillLabel color={SECTOR_COLORS[s] ?? "#94a3b8"} />}
+                  />
+                ))}
               </LineChart>
             </ResponsiveContainer>
           </div>
