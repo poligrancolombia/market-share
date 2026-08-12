@@ -46,15 +46,3 @@ export function buildTasaPromedio(years, anios, lastYear) {
   }
   return rates.length ? rates.reduce((sum, r) => sum + r, 0) / rates.length : null;
 }
-
-// pivote genérico de dos dimensiones (Explorador): filas largas {d1, d2, valor}
-// -> { dim2Vals (ordenados), byDim1: Map(d1 -> {d2: valor}) }.
-export function pivotWide(rows, dim1Key, dim2Key, valueKey) {
-  const dim2Vals = [...new Set(rows.map((r) => r[dim2Key]))].sort();
-  const byDim1 = new Map();
-  for (const r of rows) {
-    if (!byDim1.has(r[dim1Key])) byDim1.set(r[dim1Key], {});
-    byDim1.get(r[dim1Key])[r[dim2Key]] = r[valueKey];
-  }
-  return { dim2Vals, byDim1 };
-}

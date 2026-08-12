@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { BarChart3, LineChart, Swords, Table2, Telescope, Layers, UserSquare2, CheckCircle2, Loader2, AlertTriangle } from "lucide-react";
+import { BarChart3, LineChart, Swords, Table2, Layers, UserSquare2, CheckCircle2, Loader2, AlertTriangle } from "lucide-react";
 import logo from "./assets/logo.png";
 import { useDuckDB } from "./lib/duckdb";
 import { AuthGate } from "./components/AuthGate";
@@ -7,7 +7,6 @@ import { FiltersProvider } from "./state/FiltersContext";
 import { FiltersPanel } from "./components/FiltersPanel";
 import { Tabs } from "./components/ui/Tabs";
 import { Historico } from "./tabs/Historico";
-import { Explorador } from "./tabs/Explorador";
 import { Panorama } from "./tabs/Panorama";
 import { MercadoCompetencia } from "./tabs/MercadoCompetencia";
 import { PerfilIES } from "./tabs/PerfilIES";
@@ -16,7 +15,6 @@ import { Validacion } from "./tabs/Validacion";
 
 const TAB_DEFS = [
   { id: "historico", label: "Histórico", icon: Table2, Component: Historico },
-  { id: "explorador", label: "Explorador", icon: Telescope, Component: Explorador },
   { id: "panorama", label: "Panorama", icon: BarChart3, Component: Panorama },
   { id: "competencia", label: "Mercado Competencia", icon: Swords, Component: MercadoCompetencia },
   { id: "perfil-ies", label: "Perfil IES", icon: UserSquare2, Component: PerfilIES },

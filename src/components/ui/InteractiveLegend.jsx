@@ -1,6 +1,6 @@
 // leyenda clicable para ocultar/mostrar series -- reemplaza el Legend por
-// defecto de Recharts en gráficos con muchas series (Explorador, Mercado
-// Competencia). El padre controla qué series están ocultas y se lo pasa a
+// defecto de Recharts en gráficos con muchas series (Mercado Competencia,
+// Panorama). El padre controla qué series están ocultas y se lo pasa a
 // cada Bar/Line vía su prop `hide`.
 export function InteractiveLegend({ items, hidden, onToggle }) {
   return (
