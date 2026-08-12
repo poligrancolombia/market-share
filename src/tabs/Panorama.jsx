@@ -16,6 +16,7 @@ import {
   buildModalidadEvolution,
   buildModalidadMigracion,
   buildParetoComparison,
+  buildNivelAcademicoVariacion,
   MODALIDADES_MOSTRADAS,
 } from "../lib/panorama";
 import { Card } from "../components/ui/Card";
@@ -117,6 +118,33 @@ const SHARE_COLOR = "#d6336c";
 const GOOD = "#1ea672";
 const CRITICAL = "#e0637c";
 const MODALIDAD_COLORS = { Presencial: MERCADO_COLOR, Virtual: POLI_COLOR, "A distancia": SHARE_COLOR, Hibrida: "#f2a541" };
+const NIVEL_ACADEMICO_COLORS = { Pregrado: MERCADO_COLOR, Posgrado: POLI_COLOR };
+
+// etiqueta de variación % sobre cada barra -- color semántico por signo
+// (verde/rojo), igual que el resto de gráficas de crecimiento de la app.
+function VariationBarLabel({ x, y, width, value }) {
+  if (value == null) return null;
+  const up = value >= 0;
+  return (
+    <text x={x + width / 2} y={up ? y - 6 : y + 14} textAnchor="middle" fontSize={10.5} fontWeight={700} fill={up ? GOOD : CRITICAL}>
+      {up ? "+" : ""}
+      {(value * 100).toFixed(1)}%
+    </text>
+  );
+}
+
+// misma etiqueta pero para un punto de línea (Total) -- centrada encima,
+// sin depender de la altura de una barra.
+function VariationLineLabel({ x, y, value }) {
+  if (value == null) return null;
+  const up = value >= 0;
+  return (
+    <text x={x} y={y - 10} textAnchor="middle" fontSize={10.5} fontWeight={700} fill={up ? GOOD : CRITICAL}>
+      {up ? "+" : ""}
+      {(value * 100).toFixed(1)}%
+    </text>
+  );
+}
 
 function GrowthLabel({ x, y, width, index, data }) {
   const d = data?.[index];
@@ -260,6 +288,7 @@ export function Panorama() {
   const [hiddenIES, setHiddenIES] = useState(new Set());
   const [paretoCompareRows, setParetoCompareRows] = useState([]);
   const [paretoN, setParetoN] = useState(10);
+  const [nivelAcademicoRows, setNivelAcademicoRows] = useState([]);
 
   useEffect(() => {
     let cancelled = false;
@@ -292,6 +321,25 @@ export function Panorama() {
       cancelled = true;
     };
   }, [query, filters, poliName]);
+
+  // matrículas NUEVAS (Primer Curso, fijo -- no depende del toggle global de
+  // métrica) por nivel académico, para la variación % año contra año.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const where = whereCommon({ ...filters, metrica: "primer_curso" });
+      const r = await query(`
+        SELECT anio, nivel_academico, SUM(valor)::DOUBLE AS valor
+        FROM v_mercado WHERE ${where}
+        GROUP BY anio, nivel_academico
+        ORDER BY anio
+      `);
+      if (!cancelled) setNivelAcademicoRows(r);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [query, filters]);
 
   // concentración Pareto por programa (codigo_snies_programa) de las mismas
   // 15 principales IES del gráfico de arriba -- consulta aparte porque
@@ -339,6 +387,14 @@ export function Panorama() {
   const modalidadMigracion = useMemo(
     () => (modalidadRows.length ? buildModalidadMigracion(modalidadRows, anios) : { items: [] }),
     [modalidadRows, anios]
+  );
+  const nivelAcademicoAnios = useMemo(
+    () => [...new Set(nivelAcademicoRows.map((r) => r.anio))].sort((a, b) => a - b),
+    [nivelAcademicoRows]
+  );
+  const nivelAcademicoVariacion = useMemo(
+    () => (nivelAcademicoRows.length ? buildNivelAcademicoVariacion(nivelAcademicoRows, nivelAcademicoAnios) : { niveles: [], variation: [] }),
+    [nivelAcademicoRows, nivelAcademicoAnios]
   );
   // mismo orden de tamaño que el gráfico "Principales IES" de arriba, para
   // poder comparar ambos gráficos a simple vista.
@@ -435,30 +491,60 @@ export function Panorama() {
           </div>
         }
       >
-        <div style={{ width: "100%", height: 360 }}>
-          <ResponsiveContainer>
-            <BarChart data={paretoCompareSorted} margin={{ top: 28, right: 12, bottom: 8, left: 0 }} barCategoryGap="22%">
-              <CartesianGrid vertical={false} stroke="#eef2f6" />
-              <XAxis
-                dataKey="institucion"
-                tick={{ fontSize: 11, fill: "#64748b" }}
-                interval={0}
-                angle={-25}
-                textAnchor="end"
-                height={56}
-                axisLine={{ stroke: "#e2e8f0" }}
-                tickLine={false}
-              />
-              <YAxis domain={[0, 1]} hide />
-              <Tooltip
-                content={<ChartTooltip formatter={(v, name, p) => `${pct(v)} · ${fmt(p.payload.totalPrograms)} programas`} />}
-                cursor={{ fill: "rgba(31,178,222,0.06)" }}
-              />
-              <Bar dataKey={paretoShareKey} name={`Top ${paretoN}`} fill={POLI_COLOR} radius={[4, 4, 0, 0]} isAnimationActive={false}>
-                <LabelList dataKey={paretoShareKey} content={<ParetoCompareBarLabel />} />
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+          <div style={{ width: "100%", height: 360 }}>
+            <ResponsiveContainer>
+              <BarChart data={paretoCompareSorted} margin={{ top: 28, right: 12, bottom: 8, left: 0 }} barCategoryGap="22%">
+                <CartesianGrid vertical={false} stroke="#eef2f6" />
+                <XAxis
+                  dataKey="institucion"
+                  tick={{ fontSize: 11, fill: "#64748b" }}
+                  interval={0}
+                  angle={-25}
+                  textAnchor="end"
+                  height={56}
+                  axisLine={{ stroke: "#e2e8f0" }}
+                  tickLine={false}
+                />
+                <YAxis domain={[0, 1]} hide />
+                <Tooltip
+                  content={<ChartTooltip formatter={(v, name, p) => `${pct(v)} · ${fmt(p.payload.totalPrograms)} programas`} />}
+                  cursor={{ fill: "rgba(31,178,222,0.06)" }}
+                />
+                <Bar dataKey={paretoShareKey} name={`Top ${paretoN}`} fill={POLI_COLOR} radius={[4, 4, 0, 0]} isAnimationActive={false}>
+                  <LabelList dataKey={paretoShareKey} content={<ParetoCompareBarLabel />} />
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+
+          <div>
+            <h4 className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+              Variación % de matrículas nuevas por nivel académico
+              {nivelAcademicoVariacion.variation.length
+                ? ` (${nivelAcademicoVariacion.variation[0].anio}-${nivelAcademicoVariacion.variation[nivelAcademicoVariacion.variation.length - 1].anio})`
+                : ""}
+            </h4>
+            <div style={{ width: "100%", height: 328 }}>
+              <ResponsiveContainer>
+                <ComposedChart data={nivelAcademicoVariacion.variation} margin={{ top: 28, right: 12, bottom: 8, left: 0 }}>
+                  <CartesianGrid vertical={false} stroke="#eef2f6" />
+                  <XAxis dataKey="anio" tick={{ fontSize: 11, fill: "#64748b" }} axisLine={{ stroke: "#e2e8f0" }} tickLine={false} />
+                  <YAxis hide />
+                  <Tooltip content={<ChartTooltip formatter={(v) => pct(v)} />} cursor={{ fill: "rgba(31,178,222,0.06)" }} />
+                  <Legend wrapperStyle={{ fontSize: 12 }} />
+                  {nivelAcademicoVariacion.niveles.map((n) => (
+                    <Bar key={n} dataKey={n} name={n} fill={NIVEL_ACADEMICO_COLORS[n] ?? "#94a3b8"} radius={[3, 3, 0, 0]} isAnimationActive={false}>
+                      <LabelList dataKey={n} content={<VariationBarLabel />} />
+                    </Bar>
+                  ))}
+                  <Line type="monotone" dataKey="Total" name="Total" stroke="#0f172a" strokeWidth={2} dot={{ r: 3 }} isAnimationActive={false}>
+                    <LabelList dataKey="Total" content={<VariationLineLabel />} />
+                  </Line>
+                </ComposedChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
         </div>
       </Card>
 

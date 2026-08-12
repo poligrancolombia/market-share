@@ -1,4 +1,4 @@
-import { normalizeName, NIVEL_FORMACION_ORDER } from "./format";
+import { normalizeName, NIVEL_FORMACION_ORDER, NIVEL_ACADEMICO_ORDER } from "./format";
 
 function orderIndex(order, value) {
   const i = order.indexOf(value);
@@ -148,6 +148,42 @@ export function buildSectorEvolution(rows, anios) {
   const prevTotal = abs[abs.length - 2]?.Total ?? 0;
   const totalGrowth = prevTotal ? (lastTotal - prevTotal) / prevTotal : null;
   return { sectors, abs, share, totalGrowth };
+}
+
+// variación porcentual año contra año de matrículas NUEVAS (siempre Primer
+// Curso, sin importar el toggle global de métrica -- se fija en la consulta
+// que llama a esto) por nivel académico (Pregrado/Posgrado) + Total. El
+// primer año de "rows" solo sirve de base para calcular el primer % (no
+// aparece como punto propio, no hay año anterior para él).
+export function buildNivelAcademicoVariacion(rows, anios) {
+  const byYear = new Map();
+  for (const r of rows) {
+    if (!byYear.has(r.anio)) byYear.set(r.anio, new Map());
+    const m = byYear.get(r.anio);
+    m.set(r.nivel_academico, (m.get(r.nivel_academico) ?? 0) + r.valor);
+  }
+  const niveles = [...new Set(rows.map((r) => r.nivel_academico))].sort(
+    (a, b) => orderIndex(NIVEL_ACADEMICO_ORDER, a) - orderIndex(NIVEL_ACADEMICO_ORDER, b)
+  );
+  const totals = anios.map((a) => {
+    const m = byYear.get(a) ?? new Map();
+    const row = { anio: a };
+    let total = 0;
+    for (const n of niveles) {
+      row[n] = m.get(n) ?? 0;
+      total += row[n];
+    }
+    row.Total = total;
+    return row;
+  });
+  const variation = totals.slice(1).map((row, i) => {
+    const prev = totals[i];
+    const out = { anio: String(row.anio) };
+    for (const n of niveles) out[n] = prev[n] ? (row[n] - prev[n]) / prev[n] : null;
+    out.Total = prev.Total ? (row.Total - prev.Total) / prev.Total : null;
+    return out;
+  });
+  return { niveles, variation };
 }
 
 // puente/cascada real entre el total del año anterior y el del último año:
