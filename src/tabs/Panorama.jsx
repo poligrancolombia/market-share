@@ -68,16 +68,32 @@ function ParetoCompareBarLabel({ x, y, width, value }) {
   );
 }
 
+// ¿el texto blanco se lee bien encima de este color, o hace falta uno oscuro?
+function isLightColor(hex) {
+  const h = String(hex ?? "").replace("#", "");
+  if (h.length < 6) return false;
+  const r = parseInt(h.slice(0, 2), 16);
+  const g = parseInt(h.slice(2, 4), 16);
+  const b = parseInt(h.slice(4, 6), 16);
+  return 0.299 * r + 0.587 * g + 0.114 * b > 150;
+}
+
 // etiqueta vertical (texto rotado -90°) sobre cada barra -- con dos barras
 // (Oficial/Privado) muy juntas por año, un número horizontal se encimaría
-// con el de la barra vecina; rotado crece hacia arriba sin invadir al lado.
-function VerticalBarLabel({ x, y, width, value, fill }) {
+// con el de la barra vecina. Si el número alcanza dentro de la barra va
+// adentro (blanco o navy según qué tan clara sea esa barra); si la barra es
+// muy baja para contenerlo, va justo encima, en el color de la serie.
+function VerticalBarLabel({ x, y, width, height, value, fill }) {
   if (value == null) return null;
+  const text = fmt(value);
+  const textLength = text.length * 10 * 0.62;
+  const fitsInside = height >= textLength + 10;
   const cx = x + width / 2;
-  const cy = y - 6;
+  const cy = fitsInside ? y + height - 5 : y - 5;
+  const textFill = fitsInside ? (isLightColor(fill) ? "#0f385a" : "#ffffff") : fill;
   return (
-    <text x={cx} y={cy} textAnchor="start" transform={`rotate(-90, ${cx}, ${cy})`} fontSize={10} fontWeight={700} fill={fill}>
-      {fmt(value)}
+    <text x={cx} y={cy} transform={`rotate(-90, ${cx}, ${cy})`} textAnchor="start" dominantBaseline="central" fontSize={10} fontWeight={700} fill={textFill}>
+      {text}
     </text>
   );
 }
