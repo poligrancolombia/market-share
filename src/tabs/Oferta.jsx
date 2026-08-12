@@ -1,10 +1,18 @@
 import { useEffect, useMemo, useState } from "react";
 import { CartesianGrid, Cell, Line, LineChart, Pie, PieChart as Donut, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
-import { Layers, PieChart, ListTree, Sparkles, TrendingUp, TrendingDown } from "lucide-react";
+import { Layers, PieChart, ListTree, Sparkles, TrendingUp, TrendingDown, Maximize2, Minimize2 } from "lucide-react";
 import { useDuckDB } from "../lib/duckdb";
 import { useFilters, whereCommon } from "../state/FiltersContext";
 import { fmt, pct } from "../lib/format";
-import { NIVEL_FORMACION_ORDER, NIVEL_FORMACION_LABELS, buildOfertaEvolution, buildNivelDistribution, buildModalidadDistribution, buildNuevosTable } from "../lib/oferta";
+import {
+  NIVEL_FORMACION_ORDER,
+  NIVEL_FORMACION_ORDER_FULL,
+  NIVEL_FORMACION_LABELS,
+  buildOfertaEvolution,
+  buildNivelDistribution,
+  buildModalidadDistribution,
+  buildNuevosTable,
+} from "../lib/oferta";
 import { buildProgramTables } from "../lib/panorama";
 import { Card } from "../components/ui/Card";
 import { ChartTooltip } from "../components/ui/ChartTooltip";
@@ -12,8 +20,27 @@ import { InteractiveLegend } from "../components/ui/InteractiveLegend";
 import { TrendBadge } from "../components/ui/KpiBadge";
 
 // nota sobre el alcance de "nivel de formación" en esta pestaña -- se repite
-// en las 3 gráficas que cortan por nivel.
-const EXCLUSION_NOTE = "No incluye Especialización Tecnológica, Médico Quirúrgica ni Técnico Profesional (excluidas por ahora)";
+// en las 4 gráficas que cortan por nivel; cambia según la vista (simplificada
+// / completa) elegida con el botón ToggleNivelesButton.
+const EXCLUSION_NOTE = "No incluye Especialización Tecnológica, Médico Quirúrgica ni Técnico Profesional (vista simplificada)";
+const FULL_NOTE = "Incluye todos los niveles de formación, incluidas las especializaciones minoritarias";
+
+// botón compartido por las 4 gráficas de nivel de formación -- alterna entre
+// la vista simplificada (6 niveles principales) y la completa (los 9, con
+// las 3 especializaciones minoritarias agregadas).
+function ToggleNivelesButton({ showAll, onToggle }) {
+  const Icon = showAll ? Minimize2 : Maximize2;
+  return (
+    <button
+      type="button"
+      onClick={onToggle}
+      className="flex shrink-0 items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[12px] font-semibold text-brand-navy-700 ring-1 ring-slate-200/70 transition-colors hover:bg-slate-50"
+    >
+      <Icon size={13} strokeWidth={2.25} />
+      {showAll ? "Vista simplificada" : "Ver todos los niveles"}
+    </button>
+  );
+}
 
 // paleta fija (validada: 8 familias, orden fijo, nunca cíclica) -- cada
 // categoría de nivel/modalidad siempre lleva el mismo color, sin importar su
@@ -29,6 +56,10 @@ const NIVEL_COLORS = {
   Tecnologico: "#1fb2de",
   Doctorado: "#2fb88a",
   "Formacion Tecnica Profesional": "#7c6fe0",
+  // 3 niveles minoritarios, solo visibles en la vista completa.
+  "Especializacion Tecnologica": "#c78a1f",
+  "Especializacion Medico Quirurgica": "#b23a5a",
+  "Especializacion Tecnico Profesional": "#4f4a8f",
 };
 // mismos colores que MODALIDAD_COLORS de Panorama.jsx -- una modalidad
 // siempre se lee del mismo color en cualquier pestaña de la app.
@@ -127,6 +158,9 @@ export function Oferta() {
   const [rows, setRows] = useState([]);
   const [programRows, setProgramRows] = useState([]);
   const [hiddenNivel, setHiddenNivel] = useState(new Set());
+  const [showAllNiveles, setShowAllNiveles] = useState(false);
+  const activeNiveles = showAllNiveles ? NIVEL_FORMACION_ORDER_FULL : NIVEL_FORMACION_ORDER;
+  const nivelNote = showAllNiveles ? FULL_NOTE : EXCLUSION_NOTE;
 
   useEffect(() => {
     let cancelled = false;
@@ -159,16 +193,16 @@ export function Oferta() {
   const lastYear = anios[anios.length - 1];
   const prevYear = anios[anios.length - 2];
 
-  const ofertaEvo = useMemo(() => (rows.length ? buildOfertaEvolution(rows, anios) : []), [rows, anios]);
-  const nivelDist = useMemo(() => (rows.length ? buildNivelDistribution(rows, lastYear) : []), [rows, lastYear]);
-  const modalidadDist = useMemo(() => (rows.length ? buildModalidadDistribution(rows, lastYear) : []), [rows, lastYear]);
+  const ofertaEvo = useMemo(() => (rows.length ? buildOfertaEvolution(rows, anios, activeNiveles) : []), [rows, anios, activeNiveles]);
+  const nivelDist = useMemo(() => (rows.length ? buildNivelDistribution(rows, lastYear, activeNiveles) : []), [rows, lastYear, activeNiveles]);
+  const modalidadDist = useMemo(() => (rows.length ? buildModalidadDistribution(rows, lastYear, activeNiveles) : []), [rows, lastYear, activeNiveles]);
   const programTables = useMemo(
     () => (programRows.length ? buildProgramTables(programRows, anios, lastYear, prevYear) : { debut: [], growers: [], decliners: [] }),
     [programRows, anios, lastYear, prevYear]
   );
   const nuevos = useMemo(
-    () => (rows.length ? buildNuevosTable(rows, anios, lastYear) : { modalidades: [], rows: [], colTotals: [], grandTotal: 0 }),
-    [rows, anios, lastYear]
+    () => (rows.length ? buildNuevosTable(rows, anios, lastYear, activeNiveles) : { modalidades: [], rows: [], colTotals: [], grandTotal: 0 }),
+    [rows, anios, lastYear, activeNiveles]
   );
 
   const toggleNivel = (key) =>
@@ -188,7 +222,8 @@ export function Oferta() {
       <Card
         icon={Layers}
         title="Oferta de programas por nivel de formación"
-        subtitle={`Programas (por código SNIES) con más de 2 matrículas ese año, por nivel de formación — ${EXCLUSION_NOTE}`}
+        subtitle={`Programas (por código SNIES) con más de 2 matrículas ese año, por nivel de formación — ${nivelNote}`}
+        action={<ToggleNivelesButton showAll={showAllNiveles} onToggle={() => setShowAllNiveles((v) => !v)} />}
       >
         <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
           <div>
@@ -210,7 +245,7 @@ export function Oferta() {
                     }
                     cursor={{ stroke: "#cbd5e1", strokeWidth: 1 }}
                   />
-                  {NIVEL_FORMACION_ORDER.map((nivel) => {
+                  {activeNiveles.map((nivel) => {
                     const key = NIVEL_FORMACION_LABELS[nivel];
                     return (
                       <Line
@@ -230,7 +265,7 @@ export function Oferta() {
               </ResponsiveContainer>
             </div>
             <InteractiveLegend
-              items={NIVEL_FORMACION_ORDER.map((nivel) => ({ key: NIVEL_FORMACION_LABELS[nivel], label: NIVEL_FORMACION_LABELS[nivel], color: NIVEL_COLORS[nivel] }))}
+              items={activeNiveles.map((nivel) => ({ key: NIVEL_FORMACION_LABELS[nivel], label: NIVEL_FORMACION_LABELS[nivel], color: NIVEL_COLORS[nivel] }))}
               hidden={hiddenNivel}
               onToggle={toggleNivel}
             />
@@ -294,11 +329,21 @@ export function Oferta() {
       </Card>
 
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
-        <Card icon={PieChart} title="Distribución por nivel de formación" subtitle={`Programas en oferta en ${lastYear} — ${EXCLUSION_NOTE}`}>
+        <Card
+          icon={PieChart}
+          title="Distribución por nivel de formación"
+          subtitle={`Programas en oferta en ${lastYear} — ${nivelNote}`}
+          action={<ToggleNivelesButton showAll={showAllNiveles} onToggle={() => setShowAllNiveles((v) => !v)} />}
+        >
           <DistributionDonut data={nivelDist} colors={NIVEL_COLORS} />
         </Card>
 
-        <Card icon={ListTree} title="Distribución por modalidad" subtitle={`Programas en oferta en ${lastYear} — ${EXCLUSION_NOTE}`}>
+        <Card
+          icon={ListTree}
+          title="Distribución por modalidad"
+          subtitle={`Programas en oferta en ${lastYear} — ${nivelNote}`}
+          action={<ToggleNivelesButton showAll={showAllNiveles} onToggle={() => setShowAllNiveles((v) => !v)} />}
+        >
           <DistributionDonut data={modalidadDist} colors={MODALIDAD_COLORS} />
         </Card>
       </div>

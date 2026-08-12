@@ -6,11 +6,11 @@
 // viene filtrado por la métrica seleccionada).
 const OFERTA_MIN = 2;
 
-// las 6 niveles de formación que se muestran, con su nombre estandarizado.
-// OJO: "Especialización" es SOLO "Especializacion Universitaria" -- las
-// otras 3 especializaciones (Tecnológica, Médico Quirúrgica y Técnico
-// Profesional) quedan EXCLUIDAS por ahora, sin sumarse a ningún nivel ni
-// entre ellas (cada nivel de formación se cuenta por separado).
+// las 6 niveles de formación que se muestran por defecto (vista
+// simplificada), con su nombre estandarizado. Las otras 3 especializaciones
+// (Tecnológica, Médico Quirúrgica y Técnico Profesional) son minoritarias y
+// quedan ocultas por defecto -- el botón "Ver todos los niveles" de la
+// pestaña Oferta las agrega mediante NIVEL_FORMACION_ORDER_FULL.
 export const NIVEL_FORMACION_ORDER = [
   "Especializacion Universitaria",
   "Maestria",
@@ -19,15 +19,36 @@ export const NIVEL_FORMACION_ORDER = [
   "Tecnologico",
   "Formacion Tecnica Profesional",
 ];
+// los 3 niveles minoritarios, ocultos en la vista simplificada.
+export const NIVEL_FORMACION_EXTRA = [
+  "Especializacion Tecnologica",
+  "Especializacion Medico Quirurgica",
+  "Especializacion Tecnico Profesional",
+];
+// vista completa: mismo orden que arriba, con los 3 extra intercalados junto
+// a "Especialización" (misma familia).
+export const NIVEL_FORMACION_ORDER_FULL = [
+  "Especializacion Universitaria",
+  "Especializacion Tecnologica",
+  "Especializacion Medico Quirurgica",
+  "Especializacion Tecnico Profesional",
+  "Maestria",
+  "Doctorado",
+  "Universitario",
+  "Tecnologico",
+  "Formacion Tecnica Profesional",
+];
 export const NIVEL_FORMACION_LABELS = {
   "Especializacion Universitaria": "Especialización",
+  "Especializacion Tecnologica": "Esp. Tecnológica",
+  "Especializacion Medico Quirurgica": "Esp. Médico Quirúrgica",
+  "Especializacion Tecnico Profesional": "Esp. Técnico Profesional",
   Maestria: "Maestría",
   Doctorado: "Doctorado",
   Universitario: "Universitario",
   Tecnologico: "Tecnológico",
   "Formacion Tecnica Profesional": "Técnico",
 };
-const NIVEL_FORMACION_SET = new Set(NIVEL_FORMACION_ORDER);
 
 export const MODALIDAD_ORDER = ["Presencial", "Virtual", "A distancia", "Hibrida", "Dual", "Sin informacion"];
 export const MODALIDAD_LABELS = {
@@ -61,25 +82,27 @@ function groupByPrograma(rows) {
 }
 
 // evolución anual de programas "en oferta" (> OFERTA_MIN matrículas ese año)
-// para los 6 niveles de formación -- una línea por nivel. Los programas de
-// los 3 niveles de especialización excluidos simplemente no se cuentan en
-// ninguna línea (no se pierden en un "otros": quedan fuera del todo, por
-// pedido explícito). Cada fila trae además `diffs`, la diferencia de cada
-// nivel contra el año anterior (null en el primer año), para el tooltip.
-export function buildOfertaEvolution(rows, anios) {
+// por nivel de formación -- una línea por nivel. `niveles` son los niveles a
+// incluir (NIVEL_FORMACION_ORDER en la vista simplificada,
+// NIVEL_FORMACION_ORDER_FULL con el botón "ver todos"); el resto simplemente
+// no se cuenta en ninguna línea (no se pierde en un "otros"). Cada fila trae
+// además `diffs`, la diferencia de cada nivel contra el año anterior (null en
+// el primer año), para el tooltip.
+export function buildOfertaEvolution(rows, anios, niveles = NIVEL_FORMACION_ORDER) {
+  const nivelSet = new Set(niveles);
   const byPrograma = groupByPrograma(rows);
   const counts = anios.map((a) => {
     const row = { anio: String(a) };
-    for (const nivel of NIVEL_FORMACION_ORDER) row[NIVEL_FORMACION_LABELS[nivel]] = 0;
+    for (const nivel of niveles) row[NIVEL_FORMACION_LABELS[nivel]] = 0;
     for (const p of byPrograma.values()) {
-      if (!NIVEL_FORMACION_SET.has(p.nivel)) continue;
+      if (!nivelSet.has(p.nivel)) continue;
       if ((p.years[a] ?? 0) > OFERTA_MIN) row[NIVEL_FORMACION_LABELS[p.nivel]] += 1;
     }
     return row;
   });
   return counts.map((row, i) => {
     const diffs = {};
-    for (const nivel of NIVEL_FORMACION_ORDER) {
+    for (const nivel of niveles) {
       const label = NIVEL_FORMACION_LABELS[nivel];
       diffs[label] = i > 0 ? row[label] - counts[i - 1][label] : null;
     }
@@ -88,34 +111,36 @@ export function buildOfertaEvolution(rows, anios) {
 }
 
 // distribución de programas en oferta en el último año, por nivel de
-// formación (mismos 6 niveles, mismas exclusiones que la evolución).
-export function buildNivelDistribution(rows, lastYear) {
+// formación (mismos `niveles` y exclusiones que la evolución).
+export function buildNivelDistribution(rows, lastYear, niveles = NIVEL_FORMACION_ORDER) {
+  const nivelSet = new Set(niveles);
   const byPrograma = groupByPrograma(rows);
-  const counts = new Map(NIVEL_FORMACION_ORDER.map((n) => [n, 0]));
+  const counts = new Map(niveles.map((n) => [n, 0]));
   for (const p of byPrograma.values()) {
-    if (!NIVEL_FORMACION_SET.has(p.nivel)) continue;
+    if (!nivelSet.has(p.nivel)) continue;
     if ((p.years[lastYear] ?? 0) > OFERTA_MIN) counts.set(p.nivel, (counts.get(p.nivel) ?? 0) + 1);
   }
   const total = [...counts.values()].reduce((a, b) => a + b, 0);
-  return NIVEL_FORMACION_ORDER.map((n) => ({
-    key: n,
-    label: NIVEL_FORMACION_LABELS[n],
-    count: counts.get(n) ?? 0,
-    pct: total ? (counts.get(n) ?? 0) / total : 0,
-  }))
+  return niveles
+    .map((n) => ({
+      key: n,
+      label: NIVEL_FORMACION_LABELS[n],
+      count: counts.get(n) ?? 0,
+      pct: total ? (counts.get(n) ?? 0) / total : 0,
+    }))
     .filter((d) => d.count > 0)
     .sort((a, b) => b.count - a.count);
 }
 
 // distribución de programas en oferta en el último año, por modalidad --
-// misma exclusión de los 3 niveles de especialización que el resto de la
-// pestaña, para que las dos distribuciones cuenten siempre el mismo conjunto
-// de programas.
-export function buildModalidadDistribution(rows, lastYear) {
+// mismos `niveles` que el resto de la pestaña, para que las dos
+// distribuciones cuenten siempre el mismo conjunto de programas.
+export function buildModalidadDistribution(rows, lastYear, niveles = NIVEL_FORMACION_ORDER) {
+  const nivelSet = new Set(niveles);
   const byPrograma = groupByPrograma(rows);
   const counts = new Map(MODALIDAD_ORDER.map((m) => [m, 0]));
   for (const p of byPrograma.values()) {
-    if (!NIVEL_FORMACION_SET.has(p.nivel)) continue;
+    if (!nivelSet.has(p.nivel)) continue;
     if ((p.years[lastYear] ?? 0) > OFERTA_MIN) counts.set(p.modalidad, (counts.get(p.modalidad) ?? 0) + 1);
   }
   const total = [...counts.values()].reduce((a, b) => a + b, 0);
@@ -131,15 +156,16 @@ export function buildModalidadDistribution(rows, lastYear) {
 
 // tabla cruzada nivel de formación x modalidad: cantidad de programas NUEVOS
 // -- matrícula > OFERTA_MIN en el último año, y CERO en todos los años
-// anteriores (nunca antes tuvieron matrícula). Solo cuenta los 6 niveles de
-// formación de arriba.
-export function buildNuevosTable(rows, anios, lastYear) {
+// anteriores (nunca antes tuvieron matrícula). Solo cuenta los `niveles`
+// pasados.
+export function buildNuevosTable(rows, anios, lastYear, niveles = NIVEL_FORMACION_ORDER) {
+  const nivelSet = new Set(niveles);
   const byPrograma = groupByPrograma(rows);
   const priorYears = anios.filter((a) => a !== lastYear);
-  const grid = new Map(NIVEL_FORMACION_ORDER.map((n) => [n, new Map(MODALIDAD_ORDER.map((m) => [m, 0]))]));
+  const grid = new Map(niveles.map((n) => [n, new Map(MODALIDAD_ORDER.map((m) => [m, 0]))]));
 
   for (const p of byPrograma.values()) {
-    if (!NIVEL_FORMACION_SET.has(p.nivel)) continue;
+    if (!nivelSet.has(p.nivel)) continue;
     const last = p.years[lastYear] ?? 0;
     const esNuevo = last > OFERTA_MIN && priorYears.every((a) => !((p.years[a] ?? 0) > 0));
     if (!esNuevo) continue;
@@ -147,10 +173,10 @@ export function buildNuevosTable(rows, anios, lastYear) {
     row.set(p.modalidad, (row.get(p.modalidad) ?? 0) + 1);
   }
 
-  const modalidades = MODALIDAD_ORDER.filter((m) => NIVEL_FORMACION_ORDER.some((n) => (grid.get(n).get(m) ?? 0) > 0));
-  const niveles = NIVEL_FORMACION_ORDER.filter((n) => modalidades.some((m) => (grid.get(n).get(m) ?? 0) > 0));
+  const modalidades = MODALIDAD_ORDER.filter((m) => niveles.some((n) => (grid.get(n).get(m) ?? 0) > 0));
+  const nivelesConDatos = niveles.filter((n) => modalidades.some((m) => (grid.get(n).get(m) ?? 0) > 0));
 
-  const rowsOut = niveles.map((n) => {
+  const rowsOut = nivelesConDatos.map((n) => {
     const row = grid.get(n);
     const cells = modalidades.map((m) => row.get(m) ?? 0);
     return { key: n, label: NIVEL_FORMACION_LABELS[n], cells, total: cells.reduce((a, b) => a + b, 0) };
