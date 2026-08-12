@@ -50,6 +50,47 @@ function GrowthBarLabel({ x, y, width, value, formatter }) {
   );
 }
 
+// ¿el texto blanco se lee bien encima de este color, o hace falta uno oscuro?
+function isLightColor(hex) {
+  const h = String(hex ?? "").replace("#", "");
+  if (h.length < 6) return false;
+  const r = parseInt(h.slice(0, 2), 16);
+  const g = parseInt(h.slice(2, 4), 16);
+  const b = parseInt(h.slice(4, 6), 16);
+  return 0.299 * r + 0.587 * g + 0.114 * b > 150;
+}
+
+// valor de matrícula rotado 90° sobre cada barra: son 5 años x 11
+// instituciones (barras angostas), así que horizontal no cabe. Si el número
+// alcanza dentro de la barra va adentro (color según el fondo); si la barra
+// es muy baja, va afuera justo encima, también vertical.
+const MATRICULA_LABEL_FONT = 10;
+
+function VerticalMatriculaLabel({ x, y, width, height, value, barColor }) {
+  if (value == null || value === 0) return null;
+  const text = fmt(value);
+  // ancho real del texto ya rotado = su largo horizontal antes de girar.
+  const textLength = text.length * MATRICULA_LABEL_FONT * 0.62;
+  const fitsInside = height >= textLength + 10;
+  const cx = x + width / 2;
+  const cy = fitsInside ? y + height - 5 : y - 5;
+  const fill = fitsInside ? (isLightColor(barColor) ? "#0f385a" : "#ffffff") : "#475569";
+  return (
+    <text
+      x={cx}
+      y={cy}
+      transform={`rotate(-90, ${cx}, ${cy})`}
+      textAnchor="start"
+      dominantBaseline="central"
+      fontSize={MATRICULA_LABEL_FONT}
+      fontWeight={700}
+      fill={fill}
+    >
+      {text}
+    </text>
+  );
+}
+
 // etiqueta sobre cada punto del HHI -- valor entero centrado sobre el punto.
 function AreaPointLabel({ x, y, value }) {
   if (value == null) return null;
@@ -359,7 +400,7 @@ export function MercadoCompetencia() {
           >
             <div style={{ width: "100%", height: 360 }}>
               <ResponsiveContainer>
-                <BarChart data={derived.matriculaChartData} margin={{ top: 12, right: 16, bottom: 70, left: 0 }} barCategoryGap="20%">
+                <BarChart data={derived.matriculaChartData} margin={{ top: 24, right: 16, bottom: 70, left: 0 }} barCategoryGap="20%">
                   <CartesianGrid vertical={false} stroke="#eef2f6" />
                   <XAxis
                     dataKey="institucion"
@@ -373,7 +414,9 @@ export function MercadoCompetencia() {
                   <Tooltip content={<ChartTooltip formatter={(v) => fmt(v)} />} cursor={{ fill: "rgba(31,178,222,0.06)" }} />
                   <Legend wrapperStyle={{ fontSize: 12 }} />
                   {derived.matriculaYears.map((y, i) => (
-                    <Bar key={y} dataKey={y} name={String(y)} fill={MATRICULA_YEAR_COLORS[i]} radius={[3, 3, 0, 0]} />
+                    <Bar key={y} dataKey={y} name={String(y)} fill={MATRICULA_YEAR_COLORS[i]} radius={[3, 3, 0, 0]} isAnimationActive={false}>
+                      <LabelList dataKey={y} content={<VerticalMatriculaLabel barColor={MATRICULA_YEAR_COLORS[i]} />} />
+                    </Bar>
                   ))}
                 </BarChart>
               </ResponsiveContainer>
