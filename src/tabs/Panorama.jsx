@@ -16,7 +16,7 @@ import {
   buildModalidadEvolution,
   buildModalidadMigracion,
   buildParetoComparison,
-  buildNivelAcademicoVariacion,
+  buildNivelFormacionVariacion,
   MODALIDADES_MOSTRADAS,
 } from "../lib/panorama";
 import { Card } from "../components/ui/Card";
@@ -118,7 +118,18 @@ const SHARE_COLOR = "#d6336c";
 const GOOD = "#1ea672";
 const CRITICAL = "#e0637c";
 const MODALIDAD_COLORS = { Presencial: MERCADO_COLOR, Virtual: POLI_COLOR, "A distancia": SHARE_COLOR, Hibrida: "#f2a541" };
-const NIVEL_ACADEMICO_COLORS = { Pregrado: MERCADO_COLOR, Posgrado: POLI_COLOR };
+// mismos colores que NIVEL_COLORS en Oferta.jsx -- un nivel de formación
+// siempre se lee del mismo color en cualquier pestaña de la app. Los 3 que
+// no están aquí (Especializacion Tecnico Profesional/Tecnologica/Medico
+// Quirurgica) son marginales -- caen al gris neutro de respaldo.
+const NIVEL_FORMACION_COLORS = {
+  Universitario: "#0f385a",
+  "Especializacion Universitaria": "#f2a541",
+  Maestria: "#e0637c",
+  Tecnologico: "#1fb2de",
+  Doctorado: "#2fb88a",
+  "Formacion Tecnica Profesional": "#7c6fe0",
+};
 
 // etiqueta de variación % sobre cada barra -- color semántico por signo
 // (verde/rojo), igual que el resto de gráficas de crecimiento de la app.
@@ -127,19 +138,6 @@ function VariationBarLabel({ x, y, width, value }) {
   const up = value >= 0;
   return (
     <text x={x + width / 2} y={up ? y - 6 : y + 14} textAnchor="middle" fontSize={10.5} fontWeight={700} fill={up ? GOOD : CRITICAL}>
-      {up ? "+" : ""}
-      {(value * 100).toFixed(1)}%
-    </text>
-  );
-}
-
-// misma etiqueta pero para un punto de línea (Total) -- centrada encima,
-// sin depender de la altura de una barra.
-function VariationLineLabel({ x, y, value }) {
-  if (value == null) return null;
-  const up = value >= 0;
-  return (
-    <text x={x} y={y - 10} textAnchor="middle" fontSize={10.5} fontWeight={700} fill={up ? GOOD : CRITICAL}>
       {up ? "+" : ""}
       {(value * 100).toFixed(1)}%
     </text>
@@ -288,7 +286,7 @@ export function Panorama() {
   const [hiddenIES, setHiddenIES] = useState(new Set());
   const [paretoCompareRows, setParetoCompareRows] = useState([]);
   const [paretoN, setParetoN] = useState(10);
-  const [nivelAcademicoRows, setNivelAcademicoRows] = useState([]);
+  const [nivelFormacionRows, setNivelFormacionRows] = useState([]);
 
   useEffect(() => {
     let cancelled = false;
@@ -323,18 +321,18 @@ export function Panorama() {
   }, [query, filters, poliName]);
 
   // matrículas NUEVAS (Primer Curso, fijo -- no depende del toggle global de
-  // métrica) por nivel académico, para la variación % año contra año.
+  // métrica) por nivel de formación, para la variación % año contra año.
   useEffect(() => {
     let cancelled = false;
     (async () => {
       const where = whereCommon({ ...filters, metrica: "primer_curso" });
       const r = await query(`
-        SELECT anio, nivel_academico, SUM(valor)::DOUBLE AS valor
+        SELECT anio, nivel_formacion, SUM(valor)::DOUBLE AS valor
         FROM v_mercado WHERE ${where}
-        GROUP BY anio, nivel_academico
+        GROUP BY anio, nivel_formacion
         ORDER BY anio
       `);
-      if (!cancelled) setNivelAcademicoRows(r);
+      if (!cancelled) setNivelFormacionRows(r);
     })();
     return () => {
       cancelled = true;
@@ -388,13 +386,13 @@ export function Panorama() {
     () => (modalidadRows.length ? buildModalidadMigracion(modalidadRows, anios) : { items: [] }),
     [modalidadRows, anios]
   );
-  const nivelAcademicoAnios = useMemo(
-    () => [...new Set(nivelAcademicoRows.map((r) => r.anio))].sort((a, b) => a - b),
-    [nivelAcademicoRows]
+  const nivelFormacionAnios = useMemo(
+    () => [...new Set(nivelFormacionRows.map((r) => r.anio))].sort((a, b) => a - b),
+    [nivelFormacionRows]
   );
-  const nivelAcademicoVariacion = useMemo(
-    () => (nivelAcademicoRows.length ? buildNivelAcademicoVariacion(nivelAcademicoRows, nivelAcademicoAnios) : { niveles: [], variation: [] }),
-    [nivelAcademicoRows, nivelAcademicoAnios]
+  const nivelFormacionVariacion = useMemo(
+    () => (nivelFormacionRows.length ? buildNivelFormacionVariacion(nivelFormacionRows, nivelFormacionAnios) : { niveles: [], variation: [] }),
+    [nivelFormacionRows, nivelFormacionAnios]
   );
   // mismo orden de tamaño que el gráfico "Principales IES" de arriba, para
   // poder comparar ambos gráficos a simple vista.
@@ -472,26 +470,26 @@ export function Panorama() {
         </div>
       </Card>
 
-      <Card
-        icon={PieChart}
-        title="Concentración de programas por IES (Pareto)"
-        subtitle={`Qué % de la matrícula de cada institución (${fmt(lastYear)}) depende de sus programas más grandes, por código SNIES (no por nombre) — mismas 15 IES del gráfico anterior`}
-        action={
-          <div className="flex gap-1 rounded-lg border border-slate-200 p-0.5 text-[12px] font-medium">
-            {[5, 10, 20].map((n) => (
-              <button
-                key={n}
-                type="button"
-                onClick={() => setParetoN(n)}
-                className={`rounded-md px-2.5 py-1 ${paretoN === n ? "bg-brand-navy-900 text-white" : "text-slate-500 hover:text-brand-navy-900"}`}
-              >
-                Top {n}
-              </button>
-            ))}
-          </div>
-        }
-      >
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <Card
+          icon={PieChart}
+          title="Concentración de programas por IES (Pareto)"
+          subtitle={`Qué % de la matrícula de cada institución (${fmt(lastYear)}) depende de sus programas más grandes, por código SNIES (no por nombre) — mismas 15 IES del gráfico anterior`}
+          action={
+            <div className="flex gap-1 rounded-lg border border-slate-200 p-0.5 text-[12px] font-medium">
+              {[5, 10, 20].map((n) => (
+                <button
+                  key={n}
+                  type="button"
+                  onClick={() => setParetoN(n)}
+                  className={`rounded-md px-2.5 py-1 ${paretoN === n ? "bg-brand-navy-900 text-white" : "text-slate-500 hover:text-brand-navy-900"}`}
+                >
+                  Top {n}
+                </button>
+              ))}
+            </div>
+          }
+        >
           <div style={{ width: "100%", height: 360 }}>
             <ResponsiveContainer>
               <BarChart data={paretoCompareSorted} margin={{ top: 28, right: 12, bottom: 8, left: 0 }} barCategoryGap="22%">
@@ -517,36 +515,45 @@ export function Panorama() {
               </BarChart>
             </ResponsiveContainer>
           </div>
+        </Card>
 
-          <div>
-            <h4 className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-slate-400">
-              Variación % de matrículas nuevas por nivel académico
-              {nivelAcademicoVariacion.variation.length
-                ? ` (${nivelAcademicoVariacion.variation[0].anio}-${nivelAcademicoVariacion.variation[nivelAcademicoVariacion.variation.length - 1].anio})`
-                : ""}
-            </h4>
-            <div style={{ width: "100%", height: 328 }}>
-              <ResponsiveContainer>
-                <ComposedChart data={nivelAcademicoVariacion.variation} margin={{ top: 28, right: 12, bottom: 8, left: 0 }}>
-                  <CartesianGrid vertical={false} stroke="#eef2f6" />
-                  <XAxis dataKey="anio" tick={{ fontSize: 11, fill: "#64748b" }} axisLine={{ stroke: "#e2e8f0" }} tickLine={false} />
-                  <YAxis hide />
-                  <Tooltip content={<ChartTooltip formatter={(v) => pct(v)} />} cursor={{ fill: "rgba(31,178,222,0.06)" }} />
-                  <Legend wrapperStyle={{ fontSize: 12 }} />
-                  {nivelAcademicoVariacion.niveles.map((n) => (
-                    <Bar key={n} dataKey={n} name={n} fill={NIVEL_ACADEMICO_COLORS[n] ?? "#94a3b8"} radius={[3, 3, 0, 0]} isAnimationActive={false}>
-                      <LabelList dataKey={n} content={<VariationBarLabel />} />
-                    </Bar>
-                  ))}
-                  <Line type="monotone" dataKey="Total" name="Total" stroke="#0f172a" strokeWidth={2} dot={{ r: 3 }} isAnimationActive={false}>
-                    <LabelList dataKey="Total" content={<VariationLineLabel />} />
-                  </Line>
-                </ComposedChart>
-              </ResponsiveContainer>
-            </div>
+        <Card
+          icon={TrendingUp}
+          title="Variación de matrículas nuevas por nivel de formación"
+          subtitle={`Primer Curso, año contra año${
+            nivelFormacionVariacion.variation.length
+              ? ` (${nivelFormacionVariacion.variation[0].anio}-${nivelFormacionVariacion.variation[nivelFormacionVariacion.variation.length - 1].anio})`
+              : ""
+          } — pasa el cursor sobre una barra para ver la diferencia absoluta vs. el año anterior. No incluye Especialización Tecnológica, Médico Quirúrgica ni Técnico Profesional (marginales)`}
+        >
+          <div style={{ width: "100%", height: 360 }}>
+            <ResponsiveContainer>
+              <BarChart data={nivelFormacionVariacion.variation} margin={{ top: 28, right: 12, bottom: 8, left: 0 }}>
+                <CartesianGrid vertical={false} stroke="#eef2f6" />
+                <XAxis dataKey="anio" tick={{ fontSize: 11, fill: "#64748b" }} axisLine={{ stroke: "#e2e8f0" }} tickLine={false} />
+                <YAxis hide />
+                <Tooltip
+                  content={
+                    <ChartTooltip
+                      formatter={(v, name, p) => {
+                        const diff = p.payload[`${p.dataKey}__abs`];
+                        return `${pct(v)} · ${diff >= 0 ? "+" : ""}${fmt(diff)}`;
+                      }}
+                    />
+                  }
+                  cursor={{ fill: "rgba(31,178,222,0.06)" }}
+                />
+                <Legend wrapperStyle={{ fontSize: 12 }} />
+                {nivelFormacionVariacion.niveles.map((n) => (
+                  <Bar key={n} dataKey={n} name={formatNivel(n)} fill={NIVEL_FORMACION_COLORS[n] ?? "#94a3b8"} radius={[3, 3, 0, 0]} isAnimationActive={false}>
+                    <LabelList dataKey={n} content={<VariationBarLabel />} />
+                  </Bar>
+                ))}
+              </BarChart>
+            </ResponsiveContainer>
           </div>
-        </div>
-      </Card>
+        </Card>
+      </div>
 
       <Card
         icon={PieChart}

@@ -1,4 +1,4 @@
-import { normalizeName, NIVEL_FORMACION_ORDER, NIVEL_ACADEMICO_ORDER } from "./format";
+import { normalizeName, NIVEL_FORMACION_ORDER } from "./format";
 
 function orderIndex(order, value) {
   const i = order.indexOf(value);
@@ -150,37 +150,46 @@ export function buildSectorEvolution(rows, anios) {
   return { sectors, abs, share, totalGrowth };
 }
 
+// niveles marginales (muy pocos programas/matrícula, % de variación se
+// dispara sin decir nada real) -- se excluyen de esta gráfica a pedido
+// explícito, igual que ya pasa en la distribución de Oferta.jsx.
+const NIVEL_FORMACION_EXCLUIDOS = new Set([
+  "Especializacion Medico Quirurgica",
+  "Especializacion Tecnologica",
+  "Especializacion Tecnico Profesional",
+]);
+
 // variación porcentual año contra año de matrículas NUEVAS (siempre Primer
 // Curso, sin importar el toggle global de métrica -- se fija en la consulta
-// que llama a esto) por nivel académico (Pregrado/Posgrado) + Total. El
-// primer año de "rows" solo sirve de base para calcular el primer % (no
-// aparece como punto propio, no hay año anterior para él).
-export function buildNivelAcademicoVariacion(rows, anios) {
+// que llama a esto) por nivel de formación (Universitario, Maestría,
+// Técnico, etc). Cada valor de la serie lleva también la diferencia absoluta
+// vs. el año anterior (sufijo "__abs") para que el tooltip la muestre junto
+// al %. El primer año de "rows" solo sirve de base para el primer %, no
+// aparece como punto.
+export function buildNivelFormacionVariacion(rows, anios) {
   const byYear = new Map();
   for (const r of rows) {
+    if (NIVEL_FORMACION_EXCLUIDOS.has(r.nivel_formacion)) continue;
     if (!byYear.has(r.anio)) byYear.set(r.anio, new Map());
     const m = byYear.get(r.anio);
-    m.set(r.nivel_academico, (m.get(r.nivel_academico) ?? 0) + r.valor);
+    m.set(r.nivel_formacion, (m.get(r.nivel_formacion) ?? 0) + r.valor);
   }
-  const niveles = [...new Set(rows.map((r) => r.nivel_academico))].sort(
-    (a, b) => orderIndex(NIVEL_ACADEMICO_ORDER, a) - orderIndex(NIVEL_ACADEMICO_ORDER, b)
-  );
+  const niveles = [...new Set(rows.map((r) => r.nivel_formacion))]
+    .filter((n) => !NIVEL_FORMACION_EXCLUIDOS.has(n))
+    .sort((a, b) => orderIndex(NIVEL_FORMACION_ORDER, a) - orderIndex(NIVEL_FORMACION_ORDER, b));
   const totals = anios.map((a) => {
     const m = byYear.get(a) ?? new Map();
     const row = { anio: a };
-    let total = 0;
-    for (const n of niveles) {
-      row[n] = m.get(n) ?? 0;
-      total += row[n];
-    }
-    row.Total = total;
+    for (const n of niveles) row[n] = m.get(n) ?? 0;
     return row;
   });
   const variation = totals.slice(1).map((row, i) => {
     const prev = totals[i];
     const out = { anio: String(row.anio) };
-    for (const n of niveles) out[n] = prev[n] ? (row[n] - prev[n]) / prev[n] : null;
-    out.Total = prev.Total ? (row.Total - prev.Total) / prev.Total : null;
+    for (const n of niveles) {
+      out[n] = prev[n] ? (row[n] - prev[n]) / prev[n] : null;
+      out[`${n}__abs`] = row[n] - prev[n];
+    }
     return out;
   });
   return { niveles, variation };
