@@ -71,7 +71,7 @@ export function Validacion() {
     let cancelled = false;
     (async () => {
       const where = whereBase(filters);
-      const [resumenRows, porAnio, porNivel, porModalidad, porSector, porSexo, porInst] = await Promise.all([
+      const [resumenRows, porAnio, porNivelAcademico, porNivel, porModalidad, porSector, porSexo, porInst] = await Promise.all([
         query(`
           SELECT COUNT(*)::DOUBLE AS n, SUM(valor)::DOUBLE AS total,
                  COUNT(DISTINCT institucion)::DOUBLE AS insts, COUNT(DISTINCT programa_academico)::DOUBLE AS progs,
@@ -79,6 +79,7 @@ export function Validacion() {
           FROM v_mercado WHERE ${where}
         `),
         query(`SELECT anio, SUM(valor)::DOUBLE AS total FROM v_mercado WHERE ${where} GROUP BY anio ORDER BY anio`),
+        query(`SELECT nivel_academico, SUM(valor)::DOUBLE AS total FROM v_mercado WHERE ${where} GROUP BY nivel_academico ORDER BY total DESC`),
         query(`SELECT nivel_formacion, SUM(valor)::DOUBLE AS total FROM v_mercado WHERE ${where} GROUP BY nivel_formacion ORDER BY total DESC`),
         query(`SELECT metodologia, SUM(valor)::DOUBLE AS total FROM v_mercado WHERE ${where} GROUP BY metodologia ORDER BY total DESC`),
         query(`SELECT sector_ies, SUM(valor)::DOUBLE AS total FROM v_mercado WHERE ${where} GROUP BY sector_ies ORDER BY total DESC`),
@@ -87,7 +88,7 @@ export function Validacion() {
       ]);
       if (!cancelled) {
         setResumen(resumenRows[0]);
-        setBreakdowns({ porAnio, porNivel, porModalidad, porSector, porSexo, porInst });
+        setBreakdowns({ porAnio, porNivelAcademico, porNivel, porModalidad, porSector, porSexo, porInst });
       }
     })();
     return () => {
@@ -145,6 +146,7 @@ export function Validacion() {
 
             <div className="mt-6 grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
               <KVTable title="Por año" rows={breakdowns.porAnio} labelCol="anio" labelHeader="Año" />
+              <KVTable title="Por nivel académico" rows={breakdowns.porNivelAcademico} labelCol="nivel_academico" labelHeader="Nivel académico" />
               <KVTable title="Por nivel de formación" rows={breakdowns.porNivel} labelCol="nivel_formacion" labelHeader="Nivel de formación" />
               <KVTable title="Por modalidad" rows={breakdowns.porModalidad} labelCol="metodologia" labelHeader="Modalidad" />
               <KVTable title="Por sector" rows={breakdowns.porSector} labelCol="sector_ies" labelHeader="Sector" />
