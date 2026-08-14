@@ -23,6 +23,7 @@ import { Card } from "../components/ui/Card";
 import { ChartTooltip } from "../components/ui/ChartTooltip";
 import { TrendBadge } from "../components/ui/KpiBadge";
 import { InteractiveLegend } from "../components/ui/InteractiveLegend";
+import { CopyDataButton } from "../components/ui/CopyDataButton";
 
 // paleta para el share de IES (24 series fijas + Poli) -- tonos medio-oscuros
 // elegidos a mano para que se distingan entre sí y para que el texto blanco
@@ -442,6 +443,11 @@ export function Panorama() {
         icon={BarChart3}
         title="Principales IES"
         subtitle={`Últimos ${years3.length} años disponibles (${years3.join(", ")}) — se ajusta solo al último año en los datos.`}
+        action={
+          <CopyDataButton
+            getRows={() => [["Institución", ...years3.map(String)], ...topIesData.map((d) => [d.institucion, ...years3.map((y) => d[String(y)] ?? 0)])]}
+          />
+        }
       >
         <div style={{ width: "100%", height: 360 }}>
           <ResponsiveContainer>
@@ -476,17 +482,25 @@ export function Panorama() {
           title="Concentración de programas por IES (Pareto)"
           subtitle={`Qué % de la matrícula de cada institución (${fmt(lastYear)}) depende de sus programas más grandes, por código SNIES (no por nombre) — mismas 15 IES del gráfico anterior`}
           action={
-            <div className="flex gap-1 rounded-lg border border-slate-200 p-0.5 text-[12px] font-medium">
-              {[5, 10, 20].map((n) => (
-                <button
-                  key={n}
-                  type="button"
-                  onClick={() => setParetoN(n)}
-                  className={`rounded-md px-2.5 py-1 ${paretoN === n ? "bg-brand-navy-900 text-white" : "text-slate-500 hover:text-brand-navy-900"}`}
-                >
-                  Top {n}
-                </button>
-              ))}
+            <div className="flex items-center gap-2">
+              <CopyDataButton
+                getRows={() => [
+                  ["Institución", `Top ${paretoN} share`, "Programas totales"],
+                  ...paretoCompareSorted.map((d) => [d.institucion, (d[paretoShareKey] * 100).toFixed(1), d.totalPrograms]),
+                ]}
+              />
+              <div className="flex gap-1 rounded-lg border border-slate-200 p-0.5 text-[12px] font-medium">
+                {[5, 10, 20].map((n) => (
+                  <button
+                    key={n}
+                    type="button"
+                    onClick={() => setParetoN(n)}
+                    className={`rounded-md px-2.5 py-1 ${paretoN === n ? "bg-brand-navy-900 text-white" : "text-slate-500 hover:text-brand-navy-900"}`}
+                  >
+                    Top {n}
+                  </button>
+                ))}
+              </div>
             </div>
           }
         >
@@ -525,6 +539,17 @@ export function Panorama() {
               ? ` (${nivelFormacionVariacion.variation[0].anio}-${nivelFormacionVariacion.variation[nivelFormacionVariacion.variation.length - 1].anio})`
               : ""
           } — pasa el cursor sobre una barra para ver la diferencia absoluta vs. el año anterior. No incluye Especialización Tecnológica, Médico Quirúrgica ni Técnico Profesional (marginales)`}
+          action={
+            <CopyDataButton
+              getRows={() => [
+                ["Año", ...nivelFormacionVariacion.niveles.map(formatNivel)],
+                ...nivelFormacionVariacion.variation.map((v) => [
+                  v.anio,
+                  ...nivelFormacionVariacion.niveles.map((n) => (v[n] != null ? (v[n] * 100).toFixed(1) : "")),
+                ]),
+              ]}
+            />
+          }
         >
           <div style={{ width: "100%", height: 360 }}>
             <ResponsiveContainer>
@@ -559,6 +584,14 @@ export function Panorama() {
         icon={PieChart}
         title="Participación de las principales IES"
         subtitle="Top 10 + Poli dentro de un universo fijo de 25 IES rastreadas (varía según los filtros aplicados), por año — barras apiladas al 100% para comparar años entre sí; el % de cada segmento es su share real sobre el total nacional, no sobre la suma del grupo mostrado"
+        action={
+          <CopyDataButton
+            getRows={() => [
+              ["Año", ...iesShare.order],
+              ...iesShare.data.map((d) => [d.anio, ...iesShare.order.map((name) => (d.trueShare?.[name] != null ? (d.trueShare[name] * 100).toFixed(1) : ""))]),
+            ]}
+          />
+        }
       >
         <div style={{ width: "100%", height: 460 }}>
           <ResponsiveContainer>
@@ -593,10 +626,22 @@ export function Panorama() {
         />
       </Card>
 
-      <Card icon={Landmark} title="Mercado vs. Poli" subtitle="Tamaño total del mercado nacional frente al Poli, con crecimiento interanual y participación (share) por año">
+      <Card
+        icon={Landmark}
+        title="Mercado vs. Poli"
+        subtitle="Tamaño total del mercado nacional frente al Poli, con crecimiento interanual y participación (share) por año"
+        action={
+          <CopyDataButton
+            getRows={() => [
+              ["Año", "Mercado", "Poli", "Participación %"],
+              ...mercadoVsPoli.map((d) => [d.anio, d.mercado ?? 0, d.poli ?? 0, d.share != null ? (d.share * 100).toFixed(2) : ""]),
+            ]}
+          />
+        }
+      >
         <div style={{ width: "100%", height: 380 }}>
           <ResponsiveContainer>
-            <ComposedChart data={mercadoVsPoli} margin={{ top: 44, right: 16, bottom: 0, left: 0 }} barGap={2} barCategoryGap="18%">
+            <ComposedChart data={mercadoVsPoli} margin={{ top: 44, right: 36, bottom: 0, left: 20 }} barGap={2} barCategoryGap="18%">
               <CartesianGrid vertical={false} stroke="#eef2f6" />
               <XAxis dataKey="anio" tick={{ fontSize: 11, fill: "#64748b" }} axisLine={{ stroke: "#e2e8f0" }} tickLine={false} />
               <YAxis yAxisId="valor" domain={[0, valorAxisMax]} hide />
@@ -637,10 +682,22 @@ export function Panorama() {
       </Card>
 
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
-        <Card icon={TrendingUp} title="Evolución por sector" subtitle="Valores absolutos, con el crecimiento del último año">
+        <Card
+          icon={TrendingUp}
+          title="Evolución por sector"
+          subtitle="Valores absolutos, con el crecimiento del último año"
+          action={
+            <CopyDataButton
+              getRows={() => [
+                ["Año", ...sectorEvo.sectors, "Total"],
+                ...sectorEvo.abs.map((d) => [d.anio, ...sectorEvo.sectors.map((s) => d[s] ?? 0), d.Total ?? 0]),
+              ]}
+            />
+          }
+        >
           <div style={{ width: "100%", height: 320 }}>
             <ResponsiveContainer>
-              <ComposedChart data={sectorEvo.abs} margin={{ top: 56, right: 12, bottom: 0, left: 0 }}>
+              <ComposedChart data={sectorEvo.abs} margin={{ top: 56, right: 36, bottom: 0, left: 20 }}>
                 <CartesianGrid vertical={false} stroke="#eef2f6" />
                 <XAxis dataKey="anio" tick={{ fontSize: 11, fill: "#64748b" }} axisLine={{ stroke: "#e2e8f0" }} tickLine={false} />
                 <YAxis hide />
@@ -668,10 +725,22 @@ export function Panorama() {
           )}
         </Card>
 
-        <Card icon={PieChart} title="Participación" subtitle="Porcentaje de cada sector sobre el total nacional, por año">
+        <Card
+          icon={PieChart}
+          title="Participación"
+          subtitle="Porcentaje de cada sector sobre el total nacional, por año"
+          action={
+            <CopyDataButton
+              getRows={() => [
+                ["Año", ...sectorEvo.sectors],
+                ...sectorEvo.share.map((d) => [d.anio, ...sectorEvo.sectors.map((s) => (d[s] != null ? (d[s] * 100).toFixed(1) : ""))]),
+              ]}
+            />
+          }
+        >
           <div style={{ width: "100%", height: 300 }}>
             <ResponsiveContainer>
-              <LineChart data={sectorEvo.share} margin={{ top: 24, right: 16, bottom: 0, left: 16 }}>
+              <LineChart data={sectorEvo.share} margin={{ top: 24, right: 30, bottom: 0, left: 30 }}>
                 <CartesianGrid vertical={false} stroke="#eef2f6" />
                 <XAxis dataKey="anio" tick={{ fontSize: 11, fill: "#64748b" }} axisLine={{ stroke: "#e2e8f0" }} tickLine={false} />
                 <YAxis hide domain={["dataMin - 0.05", "dataMax + 0.05"]} />
@@ -695,11 +764,23 @@ export function Panorama() {
         </Card>
       </div>
 
-      <Card icon={TrendingUp} title="Evolución por modalidad" subtitle="Participación de cada modalidad sobre el total nacional, por año">
+      <Card
+        icon={TrendingUp}
+        title="Evolución por modalidad"
+        subtitle="Participación de cada modalidad sobre el total nacional, por año"
+        action={
+          <CopyDataButton
+            getRows={() => [
+              ["Año", ...MODALIDADES_MOSTRADAS],
+              ...modalidadEvo.map((d) => [d.anio, ...MODALIDADES_MOSTRADAS.map((m) => (d[m] != null ? (d[m] * 100).toFixed(1) : ""))]),
+            ]}
+          />
+        }
+      >
         <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
           <div style={{ width: "100%", height: 340 }}>
             <ResponsiveContainer>
-              <LineChart data={modalidadEvo} margin={{ top: 24, right: 16, bottom: 0, left: 16 }}>
+              <LineChart data={modalidadEvo} margin={{ top: 24, right: 30, bottom: 0, left: 30 }}>
                 <CartesianGrid vertical={false} stroke="#eef2f6" />
                 <XAxis dataKey="anio" tick={{ fontSize: 11, fill: "#64748b" }} axisLine={{ stroke: "#e2e8f0" }} tickLine={false} />
                 <YAxis hide domain={["dataMin - 0.08", "dataMax + 0.08"]} />
@@ -766,13 +847,23 @@ export function Panorama() {
         title="Quiénes más ganan y más pierden matrícula"
         subtitle={`Puente ${prevYear} → ${lastYear}: top 10 que más crecen, top 10 que más decrecen, y "Otros" agregando el resto`}
         action={
-          <div className="flex gap-4 text-xs">
-            <span className="flex items-center gap-1.5 font-medium text-emerald-600">
-              <span className="h-2 w-2 rounded-full bg-emerald-500" /> {summary.growersTotal} crecieron ({summary.growersTotal - summary.growersOficial} priv. / {summary.growersOficial} of.)
-            </span>
-            <span className="flex items-center gap-1.5 font-medium text-rose-600">
-              <span className="h-2 w-2 rounded-full bg-rose-500" /> {summary.declinersTotal} decrecieron ({summary.declinersTotal - summary.declinersOficial} priv. / {summary.declinersOficial} of.)
-            </span>
+          <div className="flex items-center gap-3">
+            <div className="flex gap-4 text-xs">
+              <span className="flex items-center gap-1.5 font-medium text-emerald-600">
+                <span className="h-2 w-2 rounded-full bg-emerald-500" /> {summary.growersTotal} crecieron ({summary.growersTotal - summary.growersOficial} priv. / {summary.growersOficial} of.)
+              </span>
+              <span className="flex items-center gap-1.5 font-medium text-rose-600">
+                <span className="h-2 w-2 rounded-full bg-rose-500" /> {summary.declinersTotal} decrecieron ({summary.declinersTotal - summary.declinersOficial} priv. / {summary.declinersOficial} of.)
+              </span>
+            </div>
+            <CopyDataButton
+              getRows={() => [
+                ["Institución/Año", "Tipo", "Valor/Diferencia", "Crecimiento %"],
+                ...bridge.chartData.map((d) =>
+                  d.kind === "total" ? [d.label, "Total", d.total ?? 0, ""] : [d.label, d.dif >= 0 ? "Crece" : "Decrece", d.dif ?? 0, d.growth != null ? (d.growth * 100).toFixed(1) : ""]
+                ),
+              ]}
+            />
           </div>
         }
       >

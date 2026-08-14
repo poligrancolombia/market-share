@@ -19,6 +19,7 @@ import { Card } from "../components/ui/Card";
 import { ChartTooltip } from "../components/ui/ChartTooltip";
 import { SearchSelect } from "../components/ui/SearchSelect";
 import { KpiTile, TrendBadge } from "../components/ui/KpiBadge";
+import { CopyDataButton } from "../components/ui/CopyDataButton";
 
 const SHARE_COLOR = "#1fb2de";
 
@@ -499,9 +500,12 @@ export function PerfilIES() {
               </div>
             </div>
             <div className="w-full shrink-0 lg:w-64">
-              <h4 className="mb-1 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-slate-400">
-                <PieChart size={12} /> Evolución de participación (últimos 5 años)
-              </h4>
+              <div className="mb-1 flex items-center justify-between">
+                <h4 className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+                  <PieChart size={12} /> Evolución de participación (últimos 5 años)
+                </h4>
+                <CopyDataButton getRows={() => [["Año", "Share %", "Valor"], ...derived.shareEvo.map((d) => [d.anio, d.share != null ? (d.share * 100).toFixed(2) : "", d.valor ?? ""])]} />
+              </div>
               <div style={{ width: "100%", height: 140 }}>
                 <ResponsiveContainer>
                   <BarChart data={derived.shareEvo} margin={{ top: 18, right: 4, bottom: 0, left: 4 }}>

@@ -21,6 +21,19 @@ import { Card } from "../components/ui/Card";
 import { ChartTooltip } from "../components/ui/ChartTooltip";
 import { InteractiveLegend } from "../components/ui/InteractiveLegend";
 import { TrendBadge } from "../components/ui/KpiBadge";
+import { CopyDataButton } from "../components/ui/CopyDataButton";
+
+// filas [Año, ...una columna por serie] a partir de la misma `data`/`series`
+// que consume EvolutionChart -- listas para CopyDataButton.
+function evolutionRows(data, series) {
+  return [["Año", ...series.map((s) => s.label)], ...data.map((r) => [r.anio, ...series.map((s) => r[s.label] ?? 0)])];
+}
+
+// filas [categoría, Programas, % del total] a partir de la misma `data` que
+// consume DistributionDonut.
+function distributionRows(data, labelHeader) {
+  return [[labelHeader, "Programas", "% del total"], ...data.map((d) => [d.label, d.count, (d.pct * 100).toFixed(1)])];
+}
 
 // nota sobre el alcance de "nivel de formación" en esta pestaña -- se repite
 // en las 4 gráficas que cortan por nivel; cambia según la vista (simplificada
@@ -100,7 +113,11 @@ function EvolutionChart({ data, series, hidden, height = 300 }) {
   return (
     <div style={{ width: "100%", height }}>
       <ResponsiveContainer>
-        <LineChart data={data} margin={{ top: 16, right: 16, bottom: 0, left: 0 }}>
+        {/* margin izq/der amplio: el SVG raíz recorta todo lo que se dibuje
+            fuera de sus límites, y la píldora del primer/último año se
+            centra EN el punto -- sin este espacio, sus bordes quedaban
+            cortados por el borde del gráfico. */}
+        <LineChart data={data} margin={{ top: 16, right: 36, bottom: 0, left: 36 }}>
           <CartesianGrid vertical={false} stroke="#eef2f6" />
           <XAxis dataKey="anio" tick={{ fontSize: 11, fill: "#64748b" }} axisLine={{ stroke: "#e2e8f0" }} tickLine={false} />
           <YAxis hide domain={["dataMin - 200", "dataMax + 200"]} />
@@ -300,13 +317,19 @@ export function Oferta() {
       >
         <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
           <div>
-            <h4 className="mb-1 text-[13.5px] font-semibold tracking-tight text-brand-navy-900">Por nivel de formación</h4>
+            <div className="mb-1 flex items-center justify-between">
+              <h4 className="text-[13.5px] font-semibold tracking-tight text-brand-navy-900">Por nivel de formación</h4>
+              <CopyDataButton getRows={() => evolutionRows(ofertaEvo, nivelSeries)} />
+            </div>
             <EvolutionChart data={ofertaEvo} series={nivelSeries} hidden={hiddenNivel} height={340} />
             <InteractiveLegend items={nivelSeries} hidden={hiddenNivel} onToggle={toggleNivel} />
           </div>
 
           <div>
-            <h4 className="mb-1 text-[13.5px] font-semibold tracking-tight text-brand-navy-900">Por modalidad</h4>
+            <div className="mb-1 flex items-center justify-between">
+              <h4 className="text-[13.5px] font-semibold tracking-tight text-brand-navy-900">Por modalidad</h4>
+              <CopyDataButton getRows={() => evolutionRows(modalidadEvo.series, modalidadEvoSeries)} />
+            </div>
             <EvolutionChart data={modalidadEvo.series} series={modalidadEvoSeries} hidden={hiddenModalidad} height={340} />
             <InteractiveLegend items={modalidadEvoSeries} hidden={hiddenModalidad} onToggle={toggleModalidad} />
           </div>
@@ -321,13 +344,19 @@ export function Oferta() {
       >
         <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
           <div>
-            <h4 className="mb-1 text-[13.5px] font-semibold tracking-tight text-brand-navy-900">Por nivel de formación</h4>
+            <div className="mb-1 flex items-center justify-between">
+              <h4 className="text-[13.5px] font-semibold tracking-tight text-brand-navy-900">Por nivel de formación</h4>
+              <CopyDataButton getRows={() => evolutionRows(nuevosNivelEvo, nivelSeries)} />
+            </div>
             <EvolutionChart data={nuevosNivelEvo} series={nivelSeries} hidden={hiddenNivel} height={300} />
             <InteractiveLegend items={nivelSeries} hidden={hiddenNivel} onToggle={toggleNivel} />
           </div>
 
           <div>
-            <h4 className="mb-1 text-[13.5px] font-semibold tracking-tight text-brand-navy-900">Por modalidad</h4>
+            <div className="mb-1 flex items-center justify-between">
+              <h4 className="text-[13.5px] font-semibold tracking-tight text-brand-navy-900">Por modalidad</h4>
+              <CopyDataButton getRows={() => evolutionRows(nuevosModalidadEvo.series, nuevosModalidadSeries)} />
+            </div>
             <EvolutionChart data={nuevosModalidadEvo.series} series={nuevosModalidadSeries} hidden={hiddenModalidad} height={300} />
             <InteractiveLegend items={nuevosModalidadSeries} hidden={hiddenModalidad} onToggle={toggleModalidad} />
           </div>
@@ -339,7 +368,12 @@ export function Oferta() {
           icon={PieChart}
           title="Distribución por nivel de formación"
           subtitle={`Programas en oferta en ${lastYear} — ${nivelNote}`}
-          action={<ToggleNivelesButton showAll={showAllNiveles} onToggle={() => setShowAllNiveles((v) => !v)} />}
+          action={
+            <div className="flex items-center gap-1">
+              <CopyDataButton getRows={() => distributionRows(nivelDist, "Nivel de formación")} />
+              <ToggleNivelesButton showAll={showAllNiveles} onToggle={() => setShowAllNiveles((v) => !v)} />
+            </div>
+          }
         >
           <DistributionDonut data={nivelDist} colors={NIVEL_COLORS} />
         </Card>
@@ -348,7 +382,12 @@ export function Oferta() {
           icon={ListTree}
           title="Distribución por modalidad"
           subtitle={`Programas en oferta en ${lastYear} — ${nivelNote}`}
-          action={<ToggleNivelesButton showAll={showAllNiveles} onToggle={() => setShowAllNiveles((v) => !v)} />}
+          action={
+            <div className="flex items-center gap-1">
+              <CopyDataButton getRows={() => distributionRows(modalidadDist, "Modalidad")} />
+              <ToggleNivelesButton showAll={showAllNiveles} onToggle={() => setShowAllNiveles((v) => !v)} />
+            </div>
+          }
         >
           <DistributionDonut data={modalidadDist} colors={MODALIDAD_COLORS} />
         </Card>

@@ -13,6 +13,7 @@ import { RadioGroup } from "../components/ui/Tabs";
 import { InteractiveLegend } from "../components/ui/InteractiveLegend";
 import { KpiTile, TrendBadge } from "../components/ui/KpiBadge";
 import { Sparkline } from "../components/ui/Sparkline";
+import { CopyDataButton } from "../components/ui/CopyDataButton";
 
 const SERIES_COLORS = ["#1fb2de", "#f2a541", "#7c6fe0", "#2fb88a", "#e0637c", "#8a97a8", "#6dd3ec"];
 const POLI_COLOR = "#0f385a";
@@ -339,10 +340,22 @@ export function MercadoCompetencia() {
       {derived && (
         <>
           <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
-            <Card icon={PieChart} title="Participación de mercado por año" subtitle="Top instituciones del grupo homólogo, más el Poli">
+            <Card
+              icon={PieChart}
+              title="Participación de mercado por año"
+              subtitle="Top instituciones del grupo homólogo, más el Poli"
+              action={
+                <CopyDataButton
+                  getRows={() => [
+                    ["Año", ...derived.topInsts],
+                    ...derived.shareChartData.map((d) => [d.anio, ...derived.topInsts.map((inst) => (d[inst] != null ? (d[inst] * 100).toFixed(1) : ""))]),
+                  ]}
+                />
+              }
+            >
               <div style={{ width: "100%", height: 300 }}>
                 <ResponsiveContainer>
-                  <LineChart data={derived.shareChartData} margin={{ top: 12, right: 16, bottom: 0, left: 0 }}>
+                  <LineChart data={derived.shareChartData} margin={{ top: 12, right: 16, bottom: 0, left: 8 }}>
                     <CartesianGrid vertical={false} stroke="#eef2f6" />
                     <XAxis dataKey="anio" tick={{ fontSize: 11, fill: "#64748b" }} axisLine={{ stroke: "#e2e8f0" }} tickLine={false} />
                     <YAxis hide />
@@ -378,10 +391,11 @@ export function MercadoCompetencia() {
               icon={TrendingUp}
               title="Concentración del mercado (HHI)"
               subtitle="Suma de las participaciones² de todos los competidores (0–10.000). <1.500 competido, 1.500–2.500 moderado, >2.500 concentrado."
+              action={<CopyDataButton getRows={() => [["Año", "HHI"], ...derived.hhiChartData.map((d) => [d.anio, d.hhi])]} />}
             >
               <div style={{ width: "100%", height: 300 }}>
                 <ResponsiveContainer>
-                  <AreaChart data={derived.hhiChartData} margin={{ top: 24, right: 16, bottom: 0, left: 0 }}>
+                  <AreaChart data={derived.hhiChartData} margin={{ top: 24, right: 24, bottom: 0, left: 20 }}>
                     <defs>
                       <linearGradient id="hhiFill" x1="0" y1="0" x2="0" y2="1">
                         <stop offset="0%" stopColor="#0f385a" stopOpacity={0.28} />
@@ -405,6 +419,14 @@ export function MercadoCompetencia() {
             icon={ListChecks}
             title="Matrículas nuevas por institución (últimos 5 años)"
             subtitle="Top 10 del grupo homólogo + Poli, con la ficha del programa por institución debajo (duración, créditos, tipo de registro, ciclo propedéutico y convenio)"
+            action={
+              <CopyDataButton
+                getRows={() => [
+                  ["Institución", ...derived.matriculaYears.map(String)],
+                  ...derived.matriculaChartData.map((d) => [d.institucion, ...derived.matriculaYears.map((y) => d[y] ?? 0)]),
+                ]}
+              />
+            }
           >
             <div style={{ width: "100%", height: 360 }}>
               <ResponsiveContainer>
@@ -493,14 +515,17 @@ export function MercadoCompetencia() {
               title="Crecimiento interanual (%)"
               subtitle={`vs. ${derived.prevYear} → ${derived.lastYear}`}
               action={
-                <RadioGroup
-                  options={[
-                    { value: "pos", label: "+" },
-                    { value: "neg", label: "−" },
-                  ]}
-                  value={growthPctSign}
-                  onChange={setGrowthPctSign}
-                />
+                <div className="flex items-center gap-2">
+                  <CopyDataButton getRows={() => [["Institución", "Crecimiento %"], ...growthPct.map((d) => [d.institucion, d.growth != null ? (d.growth * 100).toFixed(1) : ""])]} />
+                  <RadioGroup
+                    options={[
+                      { value: "pos", label: "+" },
+                      { value: "neg", label: "−" },
+                    ]}
+                    value={growthPctSign}
+                    onChange={setGrowthPctSign}
+                  />
+                </div>
               }
             >
               <div style={{ width: "100%", height: 300 }}>
@@ -534,14 +559,17 @@ export function MercadoCompetencia() {
               title="Crecimiento interanual (diferencia absoluta)"
               subtitle={`vs. ${derived.prevYear} → ${derived.lastYear}`}
               action={
-                <RadioGroup
-                  options={[
-                    { value: "pos", label: "+" },
-                    { value: "neg", label: "−" },
-                  ]}
-                  value={growthAbsSign}
-                  onChange={setGrowthAbsSign}
-                />
+                <div className="flex items-center gap-2">
+                  <CopyDataButton getRows={() => [["Institución", "Diferencia"], ...growthAbs.map((d) => [d.institucion, d.dif ?? 0])]} />
+                  <RadioGroup
+                    options={[
+                      { value: "pos", label: "+" },
+                      { value: "neg", label: "−" },
+                    ]}
+                    value={growthAbsSign}
+                    onChange={setGrowthAbsSign}
+                  />
+                </div>
               }
             >
               <div style={{ width: "100%", height: 300 }}>
