@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { CartesianGrid, Cell, Line, LineChart, Pie, PieChart as Donut, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
-import { Layers, PieChart, ListTree, Sparkles, TrendingUp, TrendingDown, Maximize2, Minimize2 } from "lucide-react";
+import { Layers, PieChart, ListTree, Sparkles, TrendingUp, TrendingDown, Maximize2, Minimize2, CalendarPlus } from "lucide-react";
 import { useDuckDB } from "../lib/duckdb";
 import { useFilters, whereCommon } from "../state/FiltersContext";
 import { fmt, pct } from "../lib/format";
@@ -8,10 +8,13 @@ import {
   NIVEL_FORMACION_ORDER,
   NIVEL_FORMACION_ORDER_FULL,
   NIVEL_FORMACION_LABELS,
+  MODALIDAD_LABELS,
   buildOfertaEvolution,
+  buildModalidadEvolution,
+  buildNuevosEvolutionByNivel,
+  buildNuevosEvolutionByModalidad,
   buildNivelDistribution,
   buildModalidadDistribution,
-  buildNuevosTable,
 } from "../lib/oferta";
 import { buildProgramTables } from "../lib/panorama";
 import { Card } from "../components/ui/Card";
@@ -88,6 +91,50 @@ function CountPillLabel({ x, y, value, color }) {
   );
 }
 
+// gráfica de líneas compartida por las 4 evoluciones de esta pestaña (por
+// nivel/modalidad, oferta total/nuevos) -- mismo eje, tooltip con diferencia
+// vs. año anterior y píldora de conteo sobre cada punto. `series` es
+// [{ key, label, color }]; `hidden` es el Set de labels ocultos por click en
+// la leyenda.
+function EvolutionChart({ data, series, hidden, height = 300 }) {
+  return (
+    <div style={{ width: "100%", height }}>
+      <ResponsiveContainer>
+        <LineChart data={data} margin={{ top: 16, right: 16, bottom: 0, left: 0 }}>
+          <CartesianGrid vertical={false} stroke="#eef2f6" />
+          <XAxis dataKey="anio" tick={{ fontSize: 11, fill: "#64748b" }} axisLine={{ stroke: "#e2e8f0" }} tickLine={false} />
+          <YAxis hide domain={["dataMin - 200", "dataMax + 200"]} />
+          <Tooltip
+            content={
+              <ChartTooltip
+                formatter={(v, name, p) => {
+                  const diff = p.payload.diffs?.[name];
+                  const diffText = diff == null ? "" : ` (${diff >= 0 ? "+" : ""}${fmt(diff)})`;
+                  return `${fmt(v)}${diffText}`;
+                }}
+              />
+            }
+            cursor={{ stroke: "#cbd5e1", strokeWidth: 1 }}
+          />
+          {series.map(({ key, label, color }) => (
+            <Line
+              key={key}
+              type="monotone"
+              dataKey={label}
+              name={label}
+              stroke={color}
+              strokeWidth={2.5}
+              dot={{ r: 3.5, fill: color, strokeWidth: 0 }}
+              hide={hidden.has(label)}
+              label={<CountPillLabel color={color} />}
+            />
+          ))}
+        </LineChart>
+      </ResponsiveContainer>
+    </div>
+  );
+}
+
 // leyenda tipo "chip" -- fila con punto de color, nombre, cantidad y %
 // alineados en columnas (antes era solo texto suelto envuelto, sin jerarquía
 // ni alineación numérica).
@@ -158,6 +205,7 @@ export function Oferta() {
   const [rows, setRows] = useState([]);
   const [programRows, setProgramRows] = useState([]);
   const [hiddenNivel, setHiddenNivel] = useState(new Set());
+  const [hiddenModalidad, setHiddenModalidad] = useState(new Set());
   const [showAllNiveles, setShowAllNiveles] = useState(false);
   const activeNiveles = showAllNiveles ? NIVEL_FORMACION_ORDER_FULL : NIVEL_FORMACION_ORDER;
   const nivelNote = showAllNiveles ? FULL_NOTE : EXCLUSION_NOTE;
@@ -194,19 +242,44 @@ export function Oferta() {
   const prevYear = anios[anios.length - 2];
 
   const ofertaEvo = useMemo(() => (rows.length ? buildOfertaEvolution(rows, anios, activeNiveles) : []), [rows, anios, activeNiveles]);
+  const modalidadEvo = useMemo(
+    () => (rows.length ? buildModalidadEvolution(rows, anios, activeNiveles) : { series: [], modalidades: [] }),
+    [rows, anios, activeNiveles]
+  );
+  const nuevosNivelEvo = useMemo(() => (rows.length ? buildNuevosEvolutionByNivel(rows, anios, activeNiveles) : []), [rows, anios, activeNiveles]);
+  const nuevosModalidadEvo = useMemo(
+    () => (rows.length ? buildNuevosEvolutionByModalidad(rows, anios, activeNiveles) : { series: [], modalidades: [] }),
+    [rows, anios, activeNiveles]
+  );
   const nivelDist = useMemo(() => (rows.length ? buildNivelDistribution(rows, lastYear, activeNiveles) : []), [rows, lastYear, activeNiveles]);
   const modalidadDist = useMemo(() => (rows.length ? buildModalidadDistribution(rows, lastYear, activeNiveles) : []), [rows, lastYear, activeNiveles]);
   const programTables = useMemo(
     () => (programRows.length ? buildProgramTables(programRows, anios, lastYear, prevYear) : { debut: [], growers: [], decliners: [] }),
     [programRows, anios, lastYear, prevYear]
   );
-  const nuevos = useMemo(
-    () => (rows.length ? buildNuevosTable(rows, anios, lastYear, activeNiveles) : { modalidades: [], rows: [], colTotals: [], grandTotal: 0 }),
-    [rows, anios, lastYear, activeNiveles]
+
+  const nivelSeries = useMemo(
+    () => activeNiveles.map((nivel) => ({ key: NIVEL_FORMACION_LABELS[nivel], label: NIVEL_FORMACION_LABELS[nivel], color: NIVEL_COLORS[nivel] })),
+    [activeNiveles]
+  );
+  const modalidadEvoSeries = useMemo(
+    () => modalidadEvo.modalidades.map((m) => ({ key: MODALIDAD_LABELS[m], label: MODALIDAD_LABELS[m], color: MODALIDAD_COLORS[m] })),
+    [modalidadEvo.modalidades]
+  );
+  const nuevosModalidadSeries = useMemo(
+    () => nuevosModalidadEvo.modalidades.map((m) => ({ key: MODALIDAD_LABELS[m], label: MODALIDAD_LABELS[m], color: MODALIDAD_COLORS[m] })),
+    [nuevosModalidadEvo.modalidades]
   );
 
   const toggleNivel = (key) =>
     setHiddenNivel((h) => {
+      const next = new Set(h);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  const toggleModalidad = (key) =>
+    setHiddenModalidad((h) => {
       const next = new Set(h);
       if (next.has(key)) next.delete(key);
       else next.add(key);
@@ -221,109 +294,42 @@ export function Oferta() {
     <div className="flex flex-col gap-5">
       <Card
         icon={Layers}
-        title="Oferta de programas por nivel de formación"
-        subtitle={`Programas (por código SNIES) con más de 2 matrículas ese año, por nivel de formación — ${nivelNote}`}
+        title="Oferta de programas por nivel de formación y modalidad"
+        subtitle={`Programas (por código SNIES) con más de 2 matrículas ese año — ${nivelNote}`}
         action={<ToggleNivelesButton showAll={showAllNiveles} onToggle={() => setShowAllNiveles((v) => !v)} />}
       >
         <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
           <div>
-            <div style={{ width: "100%", height: 340 }}>
-              <ResponsiveContainer>
-                <LineChart data={ofertaEvo} margin={{ top: 16, right: 16, bottom: 0, left: 0 }}>
-                  <CartesianGrid vertical={false} stroke="#eef2f6" />
-                  <XAxis dataKey="anio" tick={{ fontSize: 11, fill: "#64748b" }} axisLine={{ stroke: "#e2e8f0" }} tickLine={false} />
-                  <YAxis hide domain={["dataMin - 200", "dataMax + 200"]} />
-                  <Tooltip
-                    content={
-                      <ChartTooltip
-                        formatter={(v, name, p) => {
-                          const diff = p.payload.diffs?.[name];
-                          const diffText = diff == null ? "" : ` (${diff >= 0 ? "+" : ""}${fmt(diff)})`;
-                          return `${fmt(v)}${diffText}`;
-                        }}
-                      />
-                    }
-                    cursor={{ stroke: "#cbd5e1", strokeWidth: 1 }}
-                  />
-                  {activeNiveles.map((nivel) => {
-                    const key = NIVEL_FORMACION_LABELS[nivel];
-                    return (
-                      <Line
-                        key={key}
-                        type="monotone"
-                        dataKey={key}
-                        name={key}
-                        stroke={NIVEL_COLORS[nivel]}
-                        strokeWidth={2.5}
-                        dot={{ r: 3.5, fill: NIVEL_COLORS[nivel], strokeWidth: 0 }}
-                        hide={hiddenNivel.has(key)}
-                        label={<CountPillLabel color={NIVEL_COLORS[nivel]} />}
-                      />
-                    );
-                  })}
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
-            <InteractiveLegend
-              items={activeNiveles.map((nivel) => ({ key: NIVEL_FORMACION_LABELS[nivel], label: NIVEL_FORMACION_LABELS[nivel], color: NIVEL_COLORS[nivel] }))}
-              hidden={hiddenNivel}
-              onToggle={toggleNivel}
-            />
+            <h4 className="mb-1 text-[13.5px] font-semibold tracking-tight text-brand-navy-900">Por nivel de formación</h4>
+            <EvolutionChart data={ofertaEvo} series={nivelSeries} hidden={hiddenNivel} height={340} />
+            <InteractiveLegend items={nivelSeries} hidden={hiddenNivel} onToggle={toggleNivel} />
           </div>
 
           <div>
-            <h4 className="mb-1 text-[13.5px] font-semibold tracking-tight text-brand-navy-900">Programas nuevos por nivel y modalidad</h4>
-            <p className="mb-3 text-xs text-slate-500">
-              Matrícula por primera vez en {lastYear} (más de 2 matrículas, sin registro en ningún año anterior)
-            </p>
-            <div className="overflow-x-auto scroll-thin rounded-xl ring-1 ring-slate-200/70">
-              <table className="w-full border-collapse text-[13px]">
-                <thead>
-                  <tr className="bg-slate-50 text-[10px] font-semibold uppercase tracking-wide text-slate-500">
-                    <th className="px-2.5 py-1.5 text-left">Nivel</th>
-                    {nuevos.modalidades.map((m) => (
-                      <th key={m} className="px-2.5 py-1.5 text-right">
-                        {m}
-                      </th>
-                    ))}
-                    <th className="px-2.5 py-1.5 text-right">Total</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {nuevos.rows.map((r) => (
-                    <tr key={r.key} className="hover:bg-slate-50/80">
-                      <td className="px-2.5 py-1.5 font-medium text-brand-navy-900">{r.label}</td>
-                      {r.cells.map((c, i) => (
-                        <td key={i} className="px-2.5 py-1.5 text-right tabular-nums text-slate-700">
-                          {c || <span className="text-slate-300">—</span>}
-                        </td>
-                      ))}
-                      <td className="px-2.5 py-1.5 text-right font-semibold tabular-nums text-brand-navy-900">{r.total}</td>
-                    </tr>
-                  ))}
-                  {!nuevos.rows.length && (
-                    <tr>
-                      <td colSpan={nuevos.modalidades.length + 2} className="px-2.5 py-6 text-center text-slate-400">
-                        Sin programas nuevos en {lastYear} bajo este segmento.
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-                {nuevos.rows.length > 0 && (
-                  <tfoot>
-                    <tr className="bg-brand-navy-50/70 font-semibold">
-                      <td className="px-2.5 py-1.5">Total</td>
-                      {nuevos.colTotals.map((c, i) => (
-                        <td key={i} className="px-2.5 py-1.5 text-right tabular-nums">
-                          {c}
-                        </td>
-                      ))}
-                      <td className="px-2.5 py-1.5 text-right tabular-nums">{nuevos.grandTotal}</td>
-                    </tr>
-                  </tfoot>
-                )}
-              </table>
-            </div>
+            <h4 className="mb-1 text-[13.5px] font-semibold tracking-tight text-brand-navy-900">Por modalidad</h4>
+            <EvolutionChart data={modalidadEvo.series} series={modalidadEvoSeries} hidden={hiddenModalidad} height={340} />
+            <InteractiveLegend items={modalidadEvoSeries} hidden={hiddenModalidad} onToggle={toggleModalidad} />
+          </div>
+        </div>
+      </Card>
+
+      <Card
+        icon={CalendarPlus}
+        title="Programas nuevos por año"
+        subtitle={`Evolución de programas con matrícula por primera vez cada año (más de 2 matrículas, sin registro en ningún año anterior) — ${nivelNote}`}
+        action={<ToggleNivelesButton showAll={showAllNiveles} onToggle={() => setShowAllNiveles((v) => !v)} />}
+      >
+        <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+          <div>
+            <h4 className="mb-1 text-[13.5px] font-semibold tracking-tight text-brand-navy-900">Por nivel de formación</h4>
+            <EvolutionChart data={nuevosNivelEvo} series={nivelSeries} hidden={hiddenNivel} height={300} />
+            <InteractiveLegend items={nivelSeries} hidden={hiddenNivel} onToggle={toggleNivel} />
+          </div>
+
+          <div>
+            <h4 className="mb-1 text-[13.5px] font-semibold tracking-tight text-brand-navy-900">Por modalidad</h4>
+            <EvolutionChart data={nuevosModalidadEvo.series} series={nuevosModalidadSeries} hidden={hiddenModalidad} height={300} />
+            <InteractiveLegend items={nuevosModalidadSeries} hidden={hiddenModalidad} onToggle={toggleModalidad} />
           </div>
         </div>
       </Card>

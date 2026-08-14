@@ -110,6 +110,96 @@ export function buildOfertaEvolution(rows, anios, niveles = NIVEL_FORMACION_ORDE
   });
 }
 
+// misma evolución anual que buildOfertaEvolution, pero agrupada por
+// modalidad en vez de nivel de formación -- `niveles` sigue acotando qué
+// programas entran (para que el botón "ver todos los niveles" también mueva
+// esta gráfica). Solo se devuelven las modalidades con algún dato distinto de
+// cero en el rango, igual que en la distribución (evita líneas planas en el
+// legend, ej. "Sin información" cuando no aplica).
+export function buildModalidadEvolution(rows, anios, niveles = NIVEL_FORMACION_ORDER) {
+  const nivelSet = new Set(niveles);
+  const byPrograma = groupByPrograma(rows);
+  const counts = anios.map((a) => {
+    const row = { anio: String(a) };
+    for (const m of MODALIDAD_ORDER) row[MODALIDAD_LABELS[m]] = 0;
+    for (const p of byPrograma.values()) {
+      if (!nivelSet.has(p.nivel)) continue;
+      if ((p.years[a] ?? 0) > OFERTA_MIN) row[MODALIDAD_LABELS[p.modalidad]] += 1;
+    }
+    return row;
+  });
+  const modalidades = MODALIDAD_ORDER.filter((m) => counts.some((row) => row[MODALIDAD_LABELS[m]] > 0));
+  const series = counts.map((row, i) => {
+    const diffs = {};
+    for (const m of modalidades) {
+      const label = MODALIDAD_LABELS[m];
+      diffs[label] = i > 0 ? row[label] - counts[i - 1][label] : null;
+    }
+    return { ...row, diffs };
+  });
+  return { series, modalidades };
+}
+
+// evolución anual de programas NUEVOS (matrícula > OFERTA_MIN ese año y CERO
+// en TODOS los años anteriores) por nivel de formación -- generaliza
+// buildNuevosTable (que solo miraba el último año) a toda la serie. El primer
+// año del histórico se omite: sin años previos para comparar, todo programa
+// activo contaría como "nuevo" y ese pico no sería real, solo un artefacto de
+// no tener datos de antes de 2016.
+export function buildNuevosEvolutionByNivel(rows, anios, niveles = NIVEL_FORMACION_ORDER) {
+  const nivelSet = new Set(niveles);
+  const byPrograma = groupByPrograma(rows);
+  const targetYears = anios.slice(1);
+  const counts = targetYears.map((a) => {
+    const priorYears = anios.filter((y) => y < a);
+    const row = { anio: String(a) };
+    for (const nivel of niveles) row[NIVEL_FORMACION_LABELS[nivel]] = 0;
+    for (const p of byPrograma.values()) {
+      if (!nivelSet.has(p.nivel)) continue;
+      const esNuevo = (p.years[a] ?? 0) > OFERTA_MIN && priorYears.every((y) => !((p.years[y] ?? 0) > 0));
+      if (esNuevo) row[NIVEL_FORMACION_LABELS[p.nivel]] += 1;
+    }
+    return row;
+  });
+  return counts.map((row, i) => {
+    const diffs = {};
+    for (const nivel of niveles) {
+      const label = NIVEL_FORMACION_LABELS[nivel];
+      diffs[label] = i > 0 ? row[label] - counts[i - 1][label] : null;
+    }
+    return { ...row, diffs };
+  });
+}
+
+// igual que buildNuevosEvolutionByNivel, pero agrupada por modalidad --
+// mismo recorte de `niveles` y mismo filtro de modalidades sin datos.
+export function buildNuevosEvolutionByModalidad(rows, anios, niveles = NIVEL_FORMACION_ORDER) {
+  const nivelSet = new Set(niveles);
+  const byPrograma = groupByPrograma(rows);
+  const targetYears = anios.slice(1);
+  const counts = targetYears.map((a) => {
+    const priorYears = anios.filter((y) => y < a);
+    const row = { anio: String(a) };
+    for (const m of MODALIDAD_ORDER) row[MODALIDAD_LABELS[m]] = 0;
+    for (const p of byPrograma.values()) {
+      if (!nivelSet.has(p.nivel)) continue;
+      const esNuevo = (p.years[a] ?? 0) > OFERTA_MIN && priorYears.every((y) => !((p.years[y] ?? 0) > 0));
+      if (esNuevo) row[MODALIDAD_LABELS[p.modalidad]] += 1;
+    }
+    return row;
+  });
+  const modalidades = MODALIDAD_ORDER.filter((m) => counts.some((row) => row[MODALIDAD_LABELS[m]] > 0));
+  const series = counts.map((row, i) => {
+    const diffs = {};
+    for (const m of modalidades) {
+      const label = MODALIDAD_LABELS[m];
+      diffs[label] = i > 0 ? row[label] - counts[i - 1][label] : null;
+    }
+    return { ...row, diffs };
+  });
+  return { series, modalidades };
+}
+
 // distribución de programas en oferta en el último año, por nivel de
 // formación (mismos `niveles` y exclusiones que la evolución).
 export function buildNivelDistribution(rows, lastYear, niveles = NIVEL_FORMACION_ORDER) {
