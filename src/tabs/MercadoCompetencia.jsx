@@ -197,11 +197,11 @@ export function MercadoCompetencia() {
     let cancelled = false;
     (async () => {
       const r = await query(`
-        SELECT institucion, duracion_periodos, creditos, reconocimiento_ministerio, ciclos_propedeuticos, programa_en_convenio
+        SELECT institucion, programa_academico, duracion_periodos, creditos, reconocimiento_ministerio, ciclos_propedeuticos, programa_en_convenio
         FROM (
           SELECT
             i.institucion,
-            p.duracion_periodos, p.creditos, p.reconocimiento_ministerio, p.ciclos_propedeuticos, p.programa_en_convenio,
+            p.programa_academico, p.duracion_periodos, p.creditos, p.reconocimiento_ministerio, p.ciclos_propedeuticos, p.programa_en_convenio,
             ROW_NUMBER() OVER (
               PARTITION BY i.institucion
               ORDER BY CASE WHEN p.estado_programa = 'Activo' THEN 0 ELSE 1 END, p.codigo_snies_programa DESC
@@ -636,7 +636,12 @@ export function MercadoCompetencia() {
                   </tr>
                   {derived.pivot.entries.map((e) => (
                     <tr key={e.row.institucion} className={isPoli(e.row.institucion) ? "bg-brand-cyan-50/40" : ""}>
-                      <td className="px-3 py-1.5">{e.row.institucion}</td>
+                      <td className="px-3 py-1.5">
+                        <div>{e.row.institucion}</div>
+                        {detalleByInst.get(e.row.institucion)?.programa_academico && (
+                          <div className="mt-0.5 text-[11px] font-normal text-slate-400">{detalleByInst.get(e.row.institucion).programa_academico}</div>
+                        )}
+                      </td>
                       {e.values.map((v, i) => (
                         <td key={i} className="px-3 py-1.5 text-right tabular-nums">
                           {fmt(v)}
