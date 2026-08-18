@@ -104,6 +104,22 @@ function CountPillLabel({ x, y, value, color }) {
   );
 }
 
+// botón compartido por las 3 tablas "Top" de abajo -- alterna entre mostrar
+// las primeras 10 o las primeras 20 filas (ya calculadas de antemano por
+// buildProgramTables con topN=20, así que solo cambia el slice, no vuelve a
+// consultar nada).
+function ExpandTopButton({ expanded, onToggle }) {
+  return (
+    <button
+      type="button"
+      onClick={onToggle}
+      className="flex shrink-0 items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[12px] font-semibold text-brand-navy-700 ring-1 ring-slate-200/70 transition-colors hover:bg-slate-50"
+    >
+      {expanded ? "Ver top 10" : "Ver top 20"}
+    </button>
+  );
+}
+
 // gráfica de líneas compartida por las 4 evoluciones de esta pestaña (por
 // nivel/modalidad, oferta total/nuevos) -- mismo eje, tooltip con diferencia
 // vs. año anterior y píldora de conteo sobre cada punto. `series` es
@@ -271,9 +287,12 @@ export function Oferta() {
   const nivelDist = useMemo(() => (rows.length ? buildNivelDistribution(rows, lastYear, activeNiveles) : []), [rows, lastYear, activeNiveles]);
   const modalidadDist = useMemo(() => (rows.length ? buildModalidadDistribution(rows, lastYear, activeNiveles) : []), [rows, lastYear, activeNiveles]);
   const programTables = useMemo(
-    () => (programRows.length ? buildProgramTables(programRows, anios, lastYear, prevYear) : { debut: [], growers: [], decliners: [] }),
+    () => (programRows.length ? buildProgramTables(programRows, anios, lastYear, prevYear, 20) : { debut: [], growers: [], decliners: [] }),
     [programRows, anios, lastYear, prevYear]
   );
+  const [debutTop20, setDebutTop20] = useState(false);
+  const [growersTop20, setGrowersTop20] = useState(false);
+  const [declinersTop20, setDeclinersTop20] = useState(false);
 
   const nivelSeries = useMemo(
     () => activeNiveles.map((nivel) => ({ key: NIVEL_FORMACION_LABELS[nivel], label: NIVEL_FORMACION_LABELS[nivel], color: NIVEL_COLORS[nivel] })),
@@ -393,7 +412,12 @@ export function Oferta() {
         </Card>
       </div>
 
-      <Card icon={Sparkles} title="Top 10 con mejor debut" subtitle={`Programas con matrícula en ${lastYear} que no registraban en ningún año anterior`}>
+      <Card
+        icon={Sparkles}
+        title={`Top ${debutTop20 ? 20 : 10} con mejor debut`}
+        subtitle={`Programas con matrícula en ${lastYear} que no registraban en ningún año anterior`}
+        action={<ExpandTopButton expanded={debutTop20} onToggle={() => setDebutTop20((v) => !v)} />}
+      >
         <div className="overflow-x-auto scroll-thin rounded-xl ring-1 ring-slate-200/70">
           <table className="w-full border-collapse text-[13px]">
             <thead>
@@ -407,7 +431,7 @@ export function Oferta() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {programTables.debut.map((p, i) => (
+              {programTables.debut.slice(0, debutTop20 ? 20 : 10).map((p, i) => (
                 <tr key={p.codigo}>
                   <td className="px-3 py-1.5 tabular-nums text-slate-400">{i + 1}</td>
                   <td className="px-3 py-1.5 tabular-nums text-slate-500">{p.codigo}</td>
@@ -429,7 +453,12 @@ export function Oferta() {
         </div>
       </Card>
 
-      <Card icon={TrendingUp} title="Top 10 con mayor crecimiento" subtitle={`Programas por SNIES, mayor diferencia absoluta de matrícula ${prevYear} → ${lastYear}`}>
+      <Card
+        icon={TrendingUp}
+        title={`Top ${growersTop20 ? 20 : 10} con mayor crecimiento`}
+        subtitle={`Programas por SNIES, mayor diferencia absoluta de matrícula ${prevYear} → ${lastYear} — con más de 2 matrículas en ${prevYear} o ${lastYear}`}
+        action={<ExpandTopButton expanded={growersTop20} onToggle={() => setGrowersTop20((v) => !v)} />}
+      >
         <div className="overflow-x-auto scroll-thin rounded-xl ring-1 ring-slate-200/70">
           <table className="w-full border-collapse text-[13px]">
             <thead>
@@ -446,7 +475,7 @@ export function Oferta() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {programTables.growers.map((p, i) => (
+              {programTables.growers.slice(0, growersTop20 ? 20 : 10).map((p, i) => (
                 <tr key={p.codigo}>
                   <td className="px-3 py-1.5 tabular-nums text-slate-400">{i + 1}</td>
                   <td className="px-3 py-1.5 tabular-nums text-slate-500">{p.codigo}</td>
@@ -464,7 +493,12 @@ export function Oferta() {
         </div>
       </Card>
 
-      <Card icon={TrendingDown} title="Top 10 que más decrecen" subtitle={`Programas por SNIES, mayor caída absoluta de matrícula ${prevYear} → ${lastYear}`}>
+      <Card
+        icon={TrendingDown}
+        title={`Top ${declinersTop20 ? 20 : 10} que más decrecen`}
+        subtitle={`Programas por SNIES, mayor caída absoluta de matrícula ${prevYear} → ${lastYear} — con más de 2 matrículas en ${prevYear} o ${lastYear}`}
+        action={<ExpandTopButton expanded={declinersTop20} onToggle={() => setDeclinersTop20((v) => !v)} />}
+      >
         <div className="overflow-x-auto scroll-thin rounded-xl ring-1 ring-slate-200/70">
           <table className="w-full border-collapse text-[13px]">
             <thead>
@@ -481,7 +515,7 @@ export function Oferta() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {programTables.decliners.map((p, i) => (
+              {programTables.decliners.slice(0, declinersTop20 ? 20 : 10).map((p, i) => (
                 <tr key={p.codigo}>
                   <td className="px-3 py-1.5 tabular-nums text-slate-400">{i + 1}</td>
                   <td className="px-3 py-1.5 tabular-nums text-slate-500">{p.codigo}</td>
