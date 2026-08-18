@@ -414,10 +414,11 @@ export function buildProgramTables(rows, anios, lastYear, prevYear, topN = 10) {
     .sort((a, b) => b.nuevos - a.nuevos)
     .slice(0, topN);
 
-  // en crecen/decrecen se exige matrícula > 2 en AL MENOS uno de los dos años
-  // (mismo umbral "en oferta" que el resto de la pestaña) -- si no, un
-  // programa con 1-2 matriculados en ambos años puede aparecer arriba por una
-  // variación % gigante que en términos absolutos es ruido.
+  // en crecen/decrecen se exige matrícula > 2 en LOS DOS años (mismo umbral
+  // "en oferta" que el resto de la pestaña) -- así se deja fuera tanto los
+  // debuts explosivos (0 -> miles, ya cubiertos en la tabla de debut) como los
+  // programas que prácticamente desaparecen (miles -> 1), que no son
+  // crecimiento/caída real de un programa ya establecido, sino casos límite.
   const growthItems = [...byPrograma.values()]
     .map((p) => {
       const prev = p.years[prevYear] ?? 0;
@@ -426,7 +427,7 @@ export function buildProgramTables(rows, anios, lastYear, prevYear, topN = 10) {
       const growth = prev ? dif / prev : null;
       return { ...p, prev, last, dif, growth };
     })
-    .filter((p) => p.dif !== 0 && (p.prev > 2 || p.last > 2));
+    .filter((p) => p.dif !== 0 && p.prev > 2 && p.last > 2);
   const growers = growthItems
     .filter((p) => p.dif > 0)
     .sort((a, b) => b.dif - a.dif)

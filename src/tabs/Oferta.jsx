@@ -456,7 +456,7 @@ export function Oferta() {
       <Card
         icon={TrendingUp}
         title={`Top ${growersTop20 ? 20 : 10} con mayor crecimiento`}
-        subtitle={`Programas por SNIES, mayor diferencia absoluta de matrícula ${prevYear} → ${lastYear} — con más de 2 matrículas en ${prevYear} o ${lastYear}`}
+        subtitle={`Programas por SNIES, mayor diferencia absoluta de matrícula ${prevYear} → ${lastYear} — con más de 2 matrículas en ${prevYear} y en ${lastYear}`}
         action={<ExpandTopButton expanded={growersTop20} onToggle={() => setGrowersTop20((v) => !v)} />}
       >
         <div className="overflow-x-auto scroll-thin rounded-xl ring-1 ring-slate-200/70">
@@ -496,7 +496,7 @@ export function Oferta() {
       <Card
         icon={TrendingDown}
         title={`Top ${declinersTop20 ? 20 : 10} que más decrecen`}
-        subtitle={`Programas por SNIES, mayor caída absoluta de matrícula ${prevYear} → ${lastYear} — con más de 2 matrículas en ${prevYear} o ${lastYear}`}
+        subtitle={`Programas por SNIES, mayor caída absoluta de matrícula ${prevYear} → ${lastYear} — con más de 2 matrículas en ${prevYear} y en ${lastYear}`}
         action={<ExpandTopButton expanded={declinersTop20} onToggle={() => setDeclinersTop20((v) => !v)} />}
       >
         <div className="overflow-x-auto scroll-thin rounded-xl ring-1 ring-slate-200/70">
