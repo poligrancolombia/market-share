@@ -49,6 +49,7 @@ export function Validacion() {
   const { filters } = useFilters();
   const [general, setGeneral] = useState(null);
   const [resumen, setResumen] = useState(null);
+  const [competencia, setCompetencia] = useState(null);
   const [breakdowns, setBreakdowns] = useState(null);
 
   useEffect(() => {
@@ -71,11 +72,26 @@ export function Validacion() {
     let cancelled = false;
     (async () => {
       const where = whereBase(filters);
-      const [resumenRows, porAnio, porNivelAcademico, porNivel, porModalidad, porSector, porSexo, porInst] = await Promise.all([
+      const poliEsc = poliName.replace(/'/g, "''");
+      const [resumenRows, competenciaRows, porAnio, porNivelAcademico, porNivel, porModalidad, porSector, porSexo, porInst] = await Promise.all([
         query(`
           SELECT COUNT(*)::DOUBLE AS n, SUM(valor)::DOUBLE AS total,
                  COUNT(DISTINCT institucion)::DOUBLE AS insts, COUNT(DISTINCT programa_academico)::DOUBLE AS progs,
-                 SUM(CASE WHEN institucion = '${poliName.replace(/'/g, "''")}' THEN valor ELSE 0 END)::DOUBLE AS poli
+                 SUM(CASE WHEN institucion = '${poliEsc}' THEN valor ELSE 0 END)::DOUBLE AS poli
+          FROM v_mercado WHERE ${where}
+        `),
+        // grupo_homologo (competencia total) y competencia_directa marcan
+        // programas de OTRAS instituciones homologados a un programa del
+        // Poli -- ver Mercado Competencia, que analiza un grupo a la vez.
+        // Aquí se agrega TODO el universo de competencia (todos los grupos
+        // juntos), para cruzar el tamaño de ese universo contra el segmento
+        // completo y la participación del Poli dentro de él.
+        query(`
+          SELECT
+            SUM(CASE WHEN grupo_homologo IS NOT NULL THEN valor ELSE 0 END)::DOUBLE AS total_total,
+            SUM(CASE WHEN grupo_homologo IS NOT NULL AND institucion = '${poliEsc}' THEN valor ELSE 0 END)::DOUBLE AS poli_total,
+            SUM(CASE WHEN competencia_directa THEN valor ELSE 0 END)::DOUBLE AS total_directa,
+            SUM(CASE WHEN competencia_directa AND institucion = '${poliEsc}' THEN valor ELSE 0 END)::DOUBLE AS poli_directa
           FROM v_mercado WHERE ${where}
         `),
         query(`SELECT anio, SUM(valor)::DOUBLE AS total FROM v_mercado WHERE ${where} GROUP BY anio ORDER BY anio`),
@@ -88,6 +104,7 @@ export function Validacion() {
       ]);
       if (!cancelled) {
         setResumen(resumenRows[0]);
+        setCompetencia(competenciaRows[0]);
         setBreakdowns({ porAnio, porNivelAcademico, porNivel, porModalidad, porSector, porSexo, porInst });
       }
     })();
@@ -143,6 +160,52 @@ export function Validacion() {
               <KpiTile label="Instituciones" value={fmt(resumen.insts)} />
               <KpiTile label="Programas" value={fmt(resumen.progs)} />
             </div>
+
+            {competencia && (
+              <div className="mt-6">
+                <h4 className="mb-2 text-[11.5px] font-semibold uppercase tracking-wide text-slate-500">Competencia total vs. directa</h4>
+                <div className="overflow-x-auto scroll-thin rounded-xl ring-1 ring-slate-200/70">
+                  <table className="w-full border-collapse text-[13px]">
+                    <thead>
+                      <tr className="bg-slate-50 text-[10.5px] font-semibold uppercase tracking-wide text-slate-500">
+                        <th className="px-3 py-1.5 text-left">Universo</th>
+                        <th className="px-3 py-1.5 text-right">Total</th>
+                        <th className="px-3 py-1.5 text-right">Total Poli</th>
+                        <th className="px-3 py-1.5 text-right">Participación Poli</th>
+                        <th className="px-3 py-1.5 text-right">% del segmento</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      <tr>
+                        <td className="px-3 py-1.5 font-medium text-brand-navy-900">Segmento actual (todo)</td>
+                        <td className="px-3 py-1.5 text-right tabular-nums">{fmt(resumen.total)}</td>
+                        <td className="px-3 py-1.5 text-right tabular-nums">{fmt(resumen.poli)}</td>
+                        <td className="px-3 py-1.5 text-right tabular-nums">{resumen.total ? pct(resumen.poli / resumen.total) : "—"}</td>
+                        <td className="px-3 py-1.5 text-right tabular-nums">{resumen.total ? pct(1) : "—"}</td>
+                      </tr>
+                      <tr>
+                        <td className="px-3 py-1.5 font-medium text-brand-navy-900">Competencia total (grupo homólogo)</td>
+                        <td className="px-3 py-1.5 text-right tabular-nums">{fmt(competencia.total_total)}</td>
+                        <td className="px-3 py-1.5 text-right tabular-nums">{fmt(competencia.poli_total)}</td>
+                        <td className="px-3 py-1.5 text-right tabular-nums">{competencia.total_total ? pct(competencia.poli_total / competencia.total_total) : "—"}</td>
+                        <td className="px-3 py-1.5 text-right tabular-nums">{resumen.total ? pct(competencia.total_total / resumen.total) : "—"}</td>
+                      </tr>
+                      <tr>
+                        <td className="px-3 py-1.5 font-medium text-brand-navy-900">Competencia directa</td>
+                        <td className="px-3 py-1.5 text-right tabular-nums">{fmt(competencia.total_directa)}</td>
+                        <td className="px-3 py-1.5 text-right tabular-nums">{fmt(competencia.poli_directa)}</td>
+                        <td className="px-3 py-1.5 text-right tabular-nums">{competencia.total_directa ? pct(competencia.poli_directa / competencia.total_directa) : "—"}</td>
+                        <td className="px-3 py-1.5 text-right tabular-nums">{resumen.total ? pct(competencia.total_directa / resumen.total) : "—"}</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+                <p className="mt-2 text-[11px] text-slate-400">
+                  "Competencia total" agrupa todos los programas homologados a algún programa del Poli (grupo_homologo); "Competencia directa" es el
+                  subconjunto marcado como competencia directa. "% del segmento" muestra qué parte del total filtrado cae en ese universo.
+                </p>
+              </div>
+            )}
 
             <div className="mt-6 grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
               <KVTable title="Por año" rows={breakdowns.porAnio} labelCol="anio" labelHeader="Año" />
