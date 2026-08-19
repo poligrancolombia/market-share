@@ -1,5 +1,9 @@
 export const fmt = (n) => (n == null ? "" : Number(n).toLocaleString("es-CO"));
-export const pct = (n) => (n == null ? "" : (n * 100).toFixed(1) + "%");
+// decimal con coma (convención es-CO) -- toFixed() siempre usa punto sin
+// importar el locale, así que se reemplaza a mano. Único punto de verdad
+// para "número con N decimales" en toda la app.
+export const decimal = (n, digits = 1) => (n == null ? "" : Number(n).toFixed(digits).replace(".", ","));
+export const pct = (n) => (n == null ? "" : decimal(n * 100, 1) + "%");
 export const esc = (s) => String(s).replace(/'/g, "''");
 
 // condición SQL "todas estas palabras aparecen, en cualquier orden" -- separa

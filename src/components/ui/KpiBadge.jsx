@@ -1,4 +1,5 @@
 import { ArrowDownRight, ArrowUpRight, Minus } from "lucide-react";
+import { pct } from "../../lib/format";
 
 // micro-badge de porcentaje (+8.8%) -- verde/rojo semántico para crecimiento,
 // no se fuerza a los colores de marca porque aquí el color SÍ tiene que
@@ -19,7 +20,7 @@ export function TrendBadge({ value, size = "sm" }) {
     <span className={`inline-flex items-center gap-0.5 rounded-full ring-1 font-semibold ${cls} ${pad}`}>
       <Icon size={size === "sm" ? 12 : 14} strokeWidth={2.5} />
       {up ? "+" : ""}
-      {(value * 100).toFixed(1)}%
+      {pct(value)}
     </span>
   );
 }

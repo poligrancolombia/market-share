@@ -3,7 +3,7 @@ import { Bar, BarChart, CartesianGrid, LabelList, ResponsiveContainer, Tooltip, 
 import { Building2, PieChart, TrendingUp, TrendingDown, Sparkles, ChevronsUpDown, NotebookText, Award, Check } from "lucide-react";
 import { useDuckDB } from "../lib/duckdb";
 import { useFilters, whereCommon } from "../state/FiltersContext";
-import { fmt, pct, esc, formatNivel, formatModalidad, NIVEL_FORMACION_ORDER, MODALIDAD_ORDER } from "../lib/format";
+import { fmt, pct, decimal, esc, formatNivel, formatModalidad, NIVEL_FORMACION_ORDER, MODALIDAD_ORDER } from "../lib/format";
 import { computeShareByYear } from "../lib/mercadoCompetencia";
 import { HALLAZGOS_2025 } from "../data/hallazgos2025";
 import {
@@ -504,7 +504,7 @@ export function PerfilIES() {
                 <h4 className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-slate-400">
                   <PieChart size={12} /> Evolución de participación (últimos 5 años)
                 </h4>
-                <CopyDataButton getRows={() => [["Año", "Share %", "Valor"], ...derived.shareEvo.map((d) => [d.anio, d.share != null ? (d.share * 100).toFixed(2) : "", d.valor ?? ""])]} />
+                <CopyDataButton getRows={() => [["Año", "Share %", "Valor"], ...derived.shareEvo.map((d) => [d.anio, d.share != null ? decimal(d.share * 100, 2) : "", d.valor ?? ""])]} />
               </div>
               <div style={{ width: "100%", height: 140 }}>
                 <ResponsiveContainer>

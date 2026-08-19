@@ -3,7 +3,7 @@ import { CartesianGrid, Cell, Line, LineChart, Pie, PieChart as Donut, Responsiv
 import { Layers, PieChart, ListTree, Sparkles, TrendingUp, TrendingDown, Maximize2, Minimize2, CalendarPlus } from "lucide-react";
 import { useDuckDB } from "../lib/duckdb";
 import { useFilters, whereCommon } from "../state/FiltersContext";
-import { fmt, pct } from "../lib/format";
+import { fmt, pct, decimal } from "../lib/format";
 import {
   NIVEL_FORMACION_ORDER,
   NIVEL_FORMACION_ORDER_FULL,
@@ -32,7 +32,7 @@ function evolutionRows(data, series) {
 // filas [categoría, Programas, % del total] a partir de la misma `data` que
 // consume DistributionDonut.
 function distributionRows(data, labelHeader) {
-  return [[labelHeader, "Programas", "% del total"], ...data.map((d) => [d.label, d.count, (d.pct * 100).toFixed(1)])];
+  return [[labelHeader, "Programas", "% del total"], ...data.map((d) => [d.label, d.count, decimal(d.pct * 100, 1)])];
 }
 
 // nota sobre el alcance de "nivel de formación" en esta pestaña -- se repite

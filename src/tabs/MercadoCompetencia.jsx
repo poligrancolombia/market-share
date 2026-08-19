@@ -3,7 +3,7 @@ import { Area, AreaChart, Bar, BarChart, CartesianGrid, Cell, LabelList, Legend,
 import { ArrowLeftRight, TrendingUp, PieChart, Building2, ListChecks } from "lucide-react";
 import { useDuckDB } from "../lib/duckdb";
 import { useFilters } from "../state/FiltersContext";
-import { esc, fmt, pct } from "../lib/format";
+import { esc, fmt, pct, decimal } from "../lib/format";
 import { pivotByYear, buildTasaPromedio } from "../lib/pivot";
 import { whereGrupo, computeShareByYear, pickTopInsts, computeGrowthAll, pickGrowth, pickMatriculaChartData } from "../lib/mercadoCompetencia";
 import { Card } from "../components/ui/Card";
@@ -351,7 +351,7 @@ export function MercadoCompetencia() {
                 <CopyDataButton
                   getRows={() => [
                     ["Año", ...derived.topInsts],
-                    ...derived.shareChartData.map((d) => [d.anio, ...derived.topInsts.map((inst) => (d[inst] != null ? (d[inst] * 100).toFixed(1) : ""))]),
+                    ...derived.shareChartData.map((d) => [d.anio, ...derived.topInsts.map((inst) => (d[inst] != null ? decimal(d[inst] * 100, 1) : ""))]),
                   ]}
                 />
               }
@@ -519,7 +519,7 @@ export function MercadoCompetencia() {
               subtitle={`vs. ${derived.prevYear} → ${derived.lastYear}`}
               action={
                 <div className="flex items-center gap-2">
-                  <CopyDataButton getRows={() => [["Institución", "Crecimiento %"], ...growthPct.map((d) => [d.institucion, d.growth != null ? (d.growth * 100).toFixed(1) : ""])]} />
+                  <CopyDataButton getRows={() => [["Institución", "Crecimiento %"], ...growthPct.map((d) => [d.institucion, d.growth != null ? decimal(d.growth * 100, 1) : ""])]} />
                   <RadioGroup
                     options={[
                       { value: "pos", label: "+" },

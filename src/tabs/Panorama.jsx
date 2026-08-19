@@ -3,7 +3,7 @@ import { Bar, BarChart, CartesianGrid, Cell, LabelList, Legend, Line, LineChart,
 import { BarChart3, TrendingUp, PieChart, ArrowLeftRight, Landmark } from "lucide-react";
 import { useDuckDB } from "../lib/duckdb";
 import { useFilters, whereCommon } from "../state/FiltersContext";
-import { fmt, pct, esc, formatNivel } from "../lib/format";
+import { fmt, pct, decimal, esc, formatNivel } from "../lib/format";
 import {
   resolvePrincipalesIES,
   resolveIESNames,
@@ -49,7 +49,7 @@ function ShareSegmentLabel({ x, y, width, height, value }) {
   if (value == null || value < 0.015 || height < 12) return null;
   return (
     <text x={x + width / 2} y={y + height / 2} dy={3.5} textAnchor="middle" fontSize={9.5} fontWeight={700} fill="#fff">
-      {(value * 100).toFixed(1)}%
+      {pct(value)}
     </text>
   );
 }
@@ -57,7 +57,7 @@ function ShareSegmentLabel({ x, y, width, height, value }) {
 function DeltaCell({ value }) {
   if (value == null) return <span className="text-slate-300">—</span>;
   const sign = value >= 0 ? "+" : "";
-  return <span className={`font-semibold tabular-nums ${value >= 0 ? "text-emerald-600" : "text-rose-600"}`}>{sign}{(value * 100).toFixed(1)} pts</span>;
+  return <span className={`font-semibold tabular-nums ${value >= 0 ? "text-emerald-600" : "text-rose-600"}`}>{sign}{decimal(value * 100, 1)} pts</span>;
 }
 
 // etiqueta sobre cada barra de la comparación de concentración Pareto.
@@ -65,7 +65,7 @@ function ParetoCompareBarLabel({ x, y, width, value }) {
   if (value == null) return null;
   return (
     <text x={x + width / 2} y={y - 8} textAnchor="middle" fontSize={10.5} fontWeight={700} fill="#1fb2de">
-      {(value * 100).toFixed(1)}%
+      {pct(value)}
     </text>
   );
 }
@@ -140,7 +140,7 @@ function VariationBarLabel({ x, y, width, value }) {
   return (
     <text x={x + width / 2} y={up ? y - 6 : y + 14} textAnchor="middle" fontSize={10.5} fontWeight={700} fill={up ? GOOD : CRITICAL}>
       {up ? "+" : ""}
-      {(value * 100).toFixed(1)}%
+      {pct(value)}
     </text>
   );
 }
@@ -150,7 +150,7 @@ function GrowthLabel({ x, y, width, index, data }) {
   if (!d) return null;
   const up = d.dif >= 0;
   const color = up ? GOOD : CRITICAL;
-  const pctText = d.growth == null ? "s/d" : `${up ? "+" : ""}${(d.growth * 100).toFixed(1)}%`;
+  const pctText = d.growth == null ? "s/d" : `${up ? "+" : ""}${pct(d.growth)}`;
   const difText = `${up ? "+" : ""}${fmt(d.dif)}`;
   return (
     <g transform={`translate(${x + width / 2}, ${y - 24})`} textAnchor="middle">
@@ -183,7 +183,7 @@ function BridgeLabel({ x, y, width, index, data }) {
   }
   const up = d.dif >= 0;
   const color = up ? GOOD : CRITICAL;
-  const pctText = d.growth == null ? "" : `${up ? "+" : ""}${(d.growth * 100).toFixed(1)}%`;
+  const pctText = d.growth == null ? "" : `${up ? "+" : ""}${pct(d.growth)}`;
   const difText = `${up ? "+" : ""}${fmt(d.dif)}`;
   return (
     <g transform={`translate(${cx}, ${y - 22})`} textAnchor="middle">
@@ -270,7 +270,7 @@ function ValueGrowthLabel({ x, y, width, index, data, dataKey, color, fontSize =
       {growth != null && (
         <text dy={13} fontSize={fontSize - 1.5} fontWeight={600} fill={growth >= 0 ? GOOD : CRITICAL}>
           {growth >= 0 ? "+" : ""}
-          {(growth * 100).toFixed(1)}%
+          {pct(growth)}
         </text>
       )}
     </g>
@@ -486,7 +486,7 @@ export function Panorama() {
               <CopyDataButton
                 getRows={() => [
                   ["Institución", `Top ${paretoN} share`, "Programas totales"],
-                  ...paretoCompareSorted.map((d) => [d.institucion, (d[paretoShareKey] * 100).toFixed(1), d.totalPrograms]),
+                  ...paretoCompareSorted.map((d) => [d.institucion, decimal(d[paretoShareKey] * 100, 1), d.totalPrograms]),
                 ]}
               />
               <div className="flex gap-1 rounded-lg border border-slate-200 p-0.5 text-[12px] font-medium">
@@ -545,7 +545,7 @@ export function Panorama() {
                 ["Año", ...nivelFormacionVariacion.niveles.map(formatNivel)],
                 ...nivelFormacionVariacion.variation.map((v) => [
                   v.anio,
-                  ...nivelFormacionVariacion.niveles.map((n) => (v[n] != null ? (v[n] * 100).toFixed(1) : "")),
+                  ...nivelFormacionVariacion.niveles.map((n) => (v[n] != null ? decimal(v[n] * 100, 1) : "")),
                 ]),
               ]}
             />
@@ -588,7 +588,7 @@ export function Panorama() {
           <CopyDataButton
             getRows={() => [
               ["Año", ...iesShare.order],
-              ...iesShare.data.map((d) => [d.anio, ...iesShare.order.map((name) => (d.trueShare?.[name] != null ? (d.trueShare[name] * 100).toFixed(1) : ""))]),
+              ...iesShare.data.map((d) => [d.anio, ...iesShare.order.map((name) => (d.trueShare?.[name] != null ? decimal(d.trueShare[name] * 100, 1) : ""))]),
             ]}
           />
         }
@@ -634,7 +634,7 @@ export function Panorama() {
           <CopyDataButton
             getRows={() => [
               ["Año", "Mercado", "Poli", "Participación %"],
-              ...mercadoVsPoli.map((d) => [d.anio, d.mercado ?? 0, d.poli ?? 0, d.share != null ? (d.share * 100).toFixed(2) : ""]),
+              ...mercadoVsPoli.map((d) => [d.anio, d.mercado ?? 0, d.poli ?? 0, d.share != null ? decimal(d.share * 100, 2) : ""]),
             ]}
           />
         }
@@ -733,7 +733,7 @@ export function Panorama() {
             <CopyDataButton
               getRows={() => [
                 ["Año", ...sectorEvo.sectors],
-                ...sectorEvo.share.map((d) => [d.anio, ...sectorEvo.sectors.map((s) => (d[s] != null ? (d[s] * 100).toFixed(1) : ""))]),
+                ...sectorEvo.share.map((d) => [d.anio, ...sectorEvo.sectors.map((s) => (d[s] != null ? decimal(d[s] * 100, 1) : ""))]),
               ]}
             />
           }
@@ -772,7 +772,7 @@ export function Panorama() {
           <CopyDataButton
             getRows={() => [
               ["Año", ...MODALIDADES_MOSTRADAS],
-              ...modalidadEvo.map((d) => [d.anio, ...MODALIDADES_MOSTRADAS.map((m) => (d[m] != null ? (d[m] * 100).toFixed(1) : ""))]),
+              ...modalidadEvo.map((d) => [d.anio, ...MODALIDADES_MOSTRADAS.map((m) => (d[m] != null ? decimal(d[m] * 100, 1) : ""))]),
             ]}
           />
         }
@@ -860,7 +860,7 @@ export function Panorama() {
               getRows={() => [
                 ["Institución/Año", "Tipo", "Valor/Diferencia", "Crecimiento %"],
                 ...bridge.chartData.map((d) =>
-                  d.kind === "total" ? [d.label, "Total", d.total ?? 0, ""] : [d.label, d.dif >= 0 ? "Crece" : "Decrece", d.dif ?? 0, d.growth != null ? (d.growth * 100).toFixed(1) : ""]
+                  d.kind === "total" ? [d.label, "Total", d.total ?? 0, ""] : [d.label, d.dif >= 0 ? "Crece" : "Decrece", d.dif ?? 0, d.growth != null ? decimal(d.growth * 100, 1) : ""]
                 ),
               ]}
             />
