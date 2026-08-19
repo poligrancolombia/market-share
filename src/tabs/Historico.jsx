@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState, useCallback } from "react";
-import { ChevronRight, ChevronDown, Table2 } from "lucide-react";
+import { ChevronRight, ChevronDown, Table2, Search, X } from "lucide-react";
 import { useDuckDB } from "../lib/duckdb";
 import { useFilters, whereCommon, sqlIn } from "../state/FiltersContext";
-import { esc, fmt, pct } from "../lib/format";
+import { esc, fmt, pct, sqlKeywordsIlike } from "../lib/format";
 import { pivotByYear, buildYearSeries, buildTasaPromedio } from "../lib/pivot";
 import { Card } from "../components/ui/Card";
 import { RadioGroup } from "../components/ui/Tabs";
@@ -10,59 +10,20 @@ import { ChipSelect } from "../components/ui/ChipSelect";
 import { Sparkline } from "../components/ui/Sparkline";
 import { TrendBadge } from "../components/ui/KpiBadge";
 
-// autocompletado de institución/programa: consulta SOLO las tablas de
-// dimensión (dim_institucion ~290 filas, dim_programa ~18.000), nunca la
-// vista v_mercado (une hecho_indicador, ~1M filas). Un ILIKE + GROUP BY
-// sobre esa vista, repetido en cada tecla, fue lo que colgaba/tumbaba la
-// pestaña -- aquí el candidato puede no reflejar el corte exacto de los
-// filtros de métrica/nivel/modalidad (solo sector/departamento/municipio,
-// que sí viven en las dimensiones), pero la tabla principal de abajo sigue
-// aplicando todos los filtros correctamente sobre los datos reales.
+// autocompletado de institución: consulta SOLO la tabla de dimensión
+// (dim_institucion, ~290 filas), nunca la vista v_mercado (une
+// hecho_indicador, ~1M filas). Un ILIKE + GROUP BY sobre esa vista, repetido
+// en cada tecla, fue lo que colgaba/tumbaba la pestaña -- aquí el candidato
+// puede no reflejar el corte exacto de los filtros de métrica/nivel/modalidad
+// (solo sector, que sí vive en la dimensión), pero la tabla principal de
+// abajo sigue aplicando todos los filtros correctamente sobre los datos
+// reales. La búsqueda de Programa, en cambio, filtra la tabla directamente
+// (ver progSearch más abajo) -- no necesita autocompletado propio.
 async function fetchInstitucionOptions(query, filters, term) {
   const nameCond = term ? `institucion ILIKE '%${esc(term)}%'` : "TRUE";
   const sectorCond = sqlIn("sector_ies", filters.sector);
   const rows = await query(`SELECT DISTINCT institucion FROM dim_institucion WHERE ${nameCond}${sectorCond} ORDER BY institucion LIMIT 30`);
   return rows.map((r) => ({ key: r.institucion, label: r.institucion }));
-}
-
-// set (codigo_institucion‧codigo_snies_programa) de programas que SÍ
-// registran matrículas (valor > 0) en al menos un año -- se consulta una
-// sola vez contra hecho_indicador (nunca por tecla, ver nota de arriba) y se
-// usa para filtrar en el cliente las sugerencias del buscador de Programa,
-// así no aparecen programas "fantasma" sin matrícula real.
-async function fetchActiveProgramKeys(query) {
-  const rows = await query(`
-    SELECT DISTINCT codigo_institucion, codigo_snies_programa
-    FROM hecho_indicador WHERE valor > 0
-  `);
-  return new Set(rows.map((r) => `${r.codigo_institucion}‧${r.codigo_snies_programa}`));
-}
-
-async function fetchProgramaOptions(query, filters, selectedInst, term, activeProgKeys) {
-  const nameCond = term
-    ? `(p.programa_academico ILIKE '%${esc(term)}%' OR CAST(p.codigo_snies_programa AS VARCHAR) ILIKE '%${esc(term)}%')`
-    : "TRUE";
-  const instCond = selectedInst.length ? ` AND i.institucion IN (${selectedInst.map((o) => `'${esc(o.key)}'`).join(", ")})` : "";
-  const sectorCond = sqlIn("i.sector_ies", filters.sector);
-  const deptCond = sqlIn("p.departamento_programa", filters.departamento);
-  const munCond = sqlIn("p.municipio_programa", filters.municipio);
-  const rows = await query(`
-    SELECT i.institucion, p.codigo_institucion, p.codigo_snies_programa, p.programa_academico
-    FROM dim_programa p
-    JOIN dim_institucion i ON p.codigo_institucion = i.codigo_institucion
-    WHERE ${nameCond}${instCond}${sectorCond}${deptCond}${munCond}
-    ORDER BY p.programa_academico LIMIT 200
-  `);
-  const withMatriculas = activeProgKeys
-    ? rows.filter((r) => activeProgKeys.has(`${r.codigo_institucion}‧${r.codigo_snies_programa}`))
-    : rows;
-  return withMatriculas.slice(0, 40).map((r) => ({
-    key: `${r.institucion}‧${r.codigo_snies_programa}`,
-    label: `${r.programa_academico} (SNIES ${r.codigo_snies_programa})`,
-    sub: r.institucion,
-    institucion: r.institucion,
-    codigo: r.codigo_snies_programa,
-  }));
 }
 
 export function Historico() {
@@ -71,20 +32,18 @@ export function Historico() {
   const [groupBy, setGroupBy] = useState("institucion");
   const [topN, setTopN] = useState(30);
   const [selectedInst, setSelectedInst] = useState([]);
-  const [selectedProg, setSelectedProg] = useState([]);
+  const [progSearch, setProgSearch] = useState("");
+  const [progSearchDebounced, setProgSearchDebounced] = useState("");
   const [rows, setRows] = useState([]);
   const [expanded, setExpanded] = useState({}); // institucion -> array de sub-entries (o null mientras carga)
-  const [activeProgKeys, setActiveProgKeys] = useState(null);
 
+  // filtra la tabla EN VIVO mientras se escribe (como el autofiltro de Excel),
+  // sin tener que elegir un resultado de una lista -- se debounce 300ms para
+  // no relanzar la consulta agregada en cada tecla.
   useEffect(() => {
-    let cancelled = false;
-    fetchActiveProgramKeys(query).then((keys) => {
-      if (!cancelled) setActiveProgKeys(keys);
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [query]);
+    const t = setTimeout(() => setProgSearchDebounced(progSearch), 300);
+    return () => clearTimeout(t);
+  }, [progSearch]);
 
   useEffect(() => {
     let cancelled = false;
@@ -92,9 +51,8 @@ export function Historico() {
       let where = whereCommon(filters);
       if (selectedInst.length) where += ` AND institucion IN (${selectedInst.map((o) => `'${esc(o.key)}'`).join(", ")})`;
       const keyCols = groupBy === "institucion" ? ["institucion"] : ["institucion", "codigo_snies_programa", "programa_academico"];
-      if (groupBy === "programa" && selectedProg.length) {
-        const conds = selectedProg.map((o) => `(institucion = '${esc(o.institucion)}' AND codigo_snies_programa = ${o.codigo})`).join(" OR ");
-        where += ` AND (${conds})`;
+      if (groupBy === "programa" && progSearchDebounced.trim()) {
+        where += ` AND ${sqlKeywordsIlike(progSearchDebounced, ["programa_academico", "CAST(codigo_snies_programa AS VARCHAR)"])}`;
       }
       const r = await query(`
         SELECT ${keyCols.join(", ")}, anio, SUM(valor)::DOUBLE total
@@ -108,24 +66,24 @@ export function Historico() {
     return () => {
       cancelled = true;
     };
-  }, [query, filters, groupBy, selectedInst, selectedProg]);
+  }, [query, filters, groupBy, selectedInst, progSearchDebounced]);
 
   const keyCols = groupBy === "institucion" ? ["institucion"] : ["institucion", "codigo_snies_programa", "programa_academico"];
   const byProgram = keyCols.includes("codigo_snies_programa");
-  const exactSelection = selectedInst.length > 0 || (groupBy === "programa" && selectedProg.length > 0);
+  const exactSelection = selectedInst.length > 0 || (groupBy === "programa" && progSearchDebounced.trim().length > 0);
 
   const pivot = useMemo(() => pivotByYear(rows, keyCols), [rows, groupBy]);
   const { anios, lastYear, prevYear, entries: allEntries, subtotal, totalCount } = pivot;
   const clipped = !exactSelection && allEntries.length > topN;
-  // ojo: selectedProg/selectedInst cambian sincrónicamente al elegir un chip
-  // (dentro del mismo render), pero `rows` sigue siendo el conjunto viejo sin
-  // filtrar hasta que la consulta async resuelve -- un `loading` seteado en
-  // useEffect llega TARDE, después de que este render ya calculó `entries`
-  // sin límite. Por eso el tope es un valor fijo, síncrono, que nunca
-  // depende de que otro estado se haya puesto al día todavía: aunque
-  // `exactSelection` ya sea true con datos viejos (potencialmente ~18.000
-  // programas), nunca se renderizan más de este máximo -- de sobra para
-  // cualquier selección real de chips, pero nunca catastrófico.
+  // ojo: selectedInst/progSearchDebounced cambian sincrónicamente (dentro del
+  // mismo render), pero `rows` sigue siendo el conjunto viejo sin filtrar
+  // hasta que la consulta async resuelve -- un `loading` seteado en useEffect
+  // llega TARDE, después de que este render ya calculó `entries` sin límite.
+  // Por eso el tope es un valor fijo, síncrono, que nunca depende de que otro
+  // estado se haya puesto al día todavía: aunque `exactSelection` ya sea true
+  // con datos viejos (potencialmente ~18.000 programas), nunca se renderizan
+  // más de este máximo -- de sobra para cualquier búsqueda real, pero nunca
+  // catastrófico.
   const MAX_EXACT_ENTRIES = 300;
   const entries = exactSelection ? allEntries.slice(0, MAX_EXACT_ENTRIES) : allEntries.slice(0, topN);
 
@@ -179,13 +137,24 @@ export function Historico() {
         />
 
         {groupBy === "programa" && (
-          <ChipSelect
-            label="Programa (nombre o código SNIES)"
-            placeholder="ej. Sistemas o 101382"
-            selected={selectedProg}
-            onChange={setSelectedProg}
-            fetchOptions={(term) => fetchProgramaOptions(query, filters, selectedInst, term, activeProgKeys)}
-          />
+          <label className="flex flex-col gap-1.5">
+            <span className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">Programa (nombre o código SNIES)</span>
+            <div className="flex min-w-[240px] items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 py-2 shadow-sm focus-within:border-brand-cyan focus-within:ring-2 focus-within:ring-brand-cyan-100">
+              <Search size={13} className="shrink-0 text-slate-400" />
+              <input
+                type="text"
+                value={progSearch}
+                onChange={(e) => setProgSearch(e.target.value)}
+                placeholder="ej. sistemas comp o 101382"
+                className="min-w-[120px] flex-1 border-none bg-transparent py-0.5 text-[13.5px] text-brand-navy-900 outline-none placeholder:text-slate-400"
+              />
+              {progSearch && (
+                <button type="button" onClick={() => setProgSearch("")} className="shrink-0 text-slate-400 hover:text-rose-500">
+                  <X size={13} />
+                </button>
+              )}
+            </div>
+          </label>
         )}
 
         <label className="flex flex-col gap-1.5">

@@ -2,6 +2,21 @@ export const fmt = (n) => (n == null ? "" : Number(n).toLocaleString("es-CO"));
 export const pct = (n) => (n == null ? "" : (n * 100).toFixed(1) + "%");
 export const esc = (s) => String(s).replace(/'/g, "''");
 
+// condición SQL "todas estas palabras aparecen, en cualquier orden" -- separa
+// el término escrito por espacios y exige que CADA palabra coincida (ILIKE)
+// contra AL MENOS una de las columnas dadas; todas las palabras deben
+// cumplirse (AND), cada una en cualquiera de las columnas (OR). Así "sistemas
+// comp" encuentra "Ingenieria De Sistemas Y Computacion" sin que las palabras
+// aparezcan juntas ni en ese orden. Con término vacío no filtra nada.
+export function sqlKeywordsIlike(term, columns) {
+  const words = String(term ?? "")
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean);
+  if (!words.length) return "TRUE";
+  return words.map((w) => `(${columns.map((c) => `${c} ILIKE '%${esc(w)}%'`).join(" OR ")})`).join(" AND ");
+}
+
 export function normalizeName(s) {
   return String(s)
     .normalize("NFD")
