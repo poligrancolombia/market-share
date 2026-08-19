@@ -290,14 +290,17 @@ export function MercadoCompetencia() {
       >
         <div className="flex flex-wrap items-end gap-4">
           <Select label="Sede POLI" value={sede} onChange={setSede} blankLabel="Todas" options={sedes} className="w-48" />
-          <Select
-            label="Programa del Poli"
-            value={grupo}
-            onChange={setGrupo}
-            blankLabel="— ninguno —"
-            options={grupoOptions.map((g) => ({ value: g.id, label: g.nombre }))}
-            className="w-72"
-          />
+          <div className="flex flex-col gap-1.5">
+            <Select
+              label="Programa del Poli"
+              value={grupo}
+              onChange={setGrupo}
+              blankLabel="— ninguno —"
+              options={grupoOptions.map((g) => ({ value: g.id, label: g.nombre }))}
+              className="w-72"
+            />
+            {grupo && <span className="text-[11px] font-medium text-slate-400">SNIES {grupo}</span>}
+          </div>
           <Select
             label="Competencia"
             value={competencia}
