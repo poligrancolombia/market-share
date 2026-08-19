@@ -4,7 +4,7 @@ import { ArrowLeftRight, TrendingUp, PieChart, Building2, ListChecks } from "luc
 import { useDuckDB } from "../lib/duckdb";
 import { useFilters } from "../state/FiltersContext";
 import { esc, fmt, pct } from "../lib/format";
-import { pivotByYear } from "../lib/pivot";
+import { pivotByYear, buildTasaPromedio } from "../lib/pivot";
 import { whereGrupo, computeShareByYear, pickTopInsts, computeGrowthAll, pickGrowth, pickMatriculaChartData } from "../lib/mercadoCompetencia";
 import { Card } from "../components/ui/Card";
 import { ChartTooltip } from "../components/ui/ChartTooltip";
@@ -618,42 +618,53 @@ export function MercadoCompetencia() {
                       DIF {derived.pivot.lastYear} vs {derived.pivot.prevYear}
                     </th>
                     <th className="px-3 py-1.5 text-left">Tendencia</th>
+                    <th className="px-3 py-1.5 text-right">Tasa Prom.</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  <tr className="bg-brand-navy-50/70 font-semibold">
-                    <td className="px-3 py-1.5">Subtotal — {derived.pivot.totalCount} instituciones</td>
-                    {derived.pivot.subtotal.values.map((v, i) => (
-                      <td key={i} className="px-3 py-1.5 text-right tabular-nums">
-                        {fmt(v)}
-                      </td>
-                    ))}
-                    <td className="px-3 py-1.5 text-right">{derived.pivot.subtotal.varr == null ? "—" : <TrendBadge value={derived.pivot.subtotal.varr} />}</td>
-                    <td className="px-3 py-1.5 text-right tabular-nums">{fmt(derived.pivot.subtotal.dif)}</td>
-                    <td className="px-3 py-1.5">
-                      <Sparkline values={derived.pivot.subtotal.values} />
-                    </td>
-                  </tr>
-                  {derived.pivot.entries.map((e) => (
-                    <tr key={e.row.institucion} className={isPoli(e.row.institucion) ? "bg-brand-cyan-50/40" : ""}>
-                      <td className="px-3 py-1.5">
-                        <div>{e.row.institucion}</div>
-                        {detalleByInst.get(e.row.institucion)?.programa_academico && (
-                          <div className="mt-0.5 text-[11px] font-normal text-slate-400">{detalleByInst.get(e.row.institucion).programa_academico}</div>
-                        )}
-                      </td>
-                      {e.values.map((v, i) => (
-                        <td key={i} className="px-3 py-1.5 text-right tabular-nums">
-                          {fmt(v)}
+                  {(() => {
+                    const subtotalTasa = buildTasaPromedio(derived.pivot.subtotal.years, derived.pivot.anios, derived.pivot.lastYear);
+                    return (
+                      <tr className="bg-brand-navy-50/70 font-semibold">
+                        <td className="px-3 py-1.5">Subtotal — {derived.pivot.totalCount} instituciones</td>
+                        {derived.pivot.subtotal.values.map((v, i) => (
+                          <td key={i} className="px-3 py-1.5 text-right tabular-nums">
+                            {fmt(v)}
+                          </td>
+                        ))}
+                        <td className="px-3 py-1.5 text-right">{derived.pivot.subtotal.varr == null ? "—" : <TrendBadge value={derived.pivot.subtotal.varr} />}</td>
+                        <td className="px-3 py-1.5 text-right tabular-nums">{fmt(derived.pivot.subtotal.dif)}</td>
+                        <td className="px-3 py-1.5">
+                          <Sparkline values={derived.pivot.subtotal.values} />
                         </td>
-                      ))}
-                      <td className="px-3 py-1.5 text-right">{e.varr == null ? "—" : <TrendBadge value={e.varr} />}</td>
-                      <td className="px-3 py-1.5 text-right tabular-nums">{fmt(e.dif)}</td>
-                      <td className="px-3 py-1.5">
-                        <Sparkline values={e.values} />
-                      </td>
-                    </tr>
-                  ))}
+                        <td className="px-3 py-1.5 text-right">{subtotalTasa == null ? "—" : <TrendBadge value={subtotalTasa} />}</td>
+                      </tr>
+                    );
+                  })()}
+                  {derived.pivot.entries.map((e) => {
+                    const entryTasa = buildTasaPromedio(e.years, derived.pivot.anios, derived.pivot.lastYear);
+                    return (
+                      <tr key={e.row.institucion} className={isPoli(e.row.institucion) ? "bg-brand-cyan-50/40" : ""}>
+                        <td className="px-3 py-1.5">
+                          <div>{e.row.institucion}</div>
+                          {detalleByInst.get(e.row.institucion)?.programa_academico && (
+                            <div className="mt-0.5 text-[11px] font-normal text-slate-400">{detalleByInst.get(e.row.institucion).programa_academico}</div>
+                          )}
+                        </td>
+                        {e.values.map((v, i) => (
+                          <td key={i} className="px-3 py-1.5 text-right tabular-nums">
+                            {fmt(v)}
+                          </td>
+                        ))}
+                        <td className="px-3 py-1.5 text-right">{e.varr == null ? "—" : <TrendBadge value={e.varr} />}</td>
+                        <td className="px-3 py-1.5 text-right tabular-nums">{fmt(e.dif)}</td>
+                        <td className="px-3 py-1.5">
+                          <Sparkline values={e.values} />
+                        </td>
+                        <td className="px-3 py-1.5 text-right">{entryTasa == null ? "—" : <TrendBadge value={entryTasa} />}</td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
