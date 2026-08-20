@@ -52,7 +52,11 @@ export function Historico() {
       if (selectedInst.length) where += ` AND institucion IN (${selectedInst.map((o) => `'${esc(o.key)}'`).join(", ")})`;
       const keyCols = groupBy === "institucion" ? ["institucion"] : ["institucion", "codigo_snies_programa", "programa_academico"];
       if (groupBy === "programa" && progSearchDebounced.trim()) {
-        where += ` AND ${sqlSearchQuery(progSearchDebounced, ["programa_academico", "CAST(codigo_snies_programa AS VARCHAR)"])}`;
+        // el paréntesis exterior es obligatorio: sqlSearchQuery puede devolver
+        // "(a) OR (b)" para búsquedas con "|" -- sin envolverlo, el OR se
+        // "escapa" del AND de los filtros generales por precedencia de SQL
+        // (AND liga más fuerte que OR), y el segundo grupo queda sin filtrar.
+        where += ` AND (${sqlSearchQuery(progSearchDebounced, ["programa_academico", "CAST(codigo_snies_programa AS VARCHAR)"])})`;
       }
       const r = await query(`
         SELECT ${keyCols.join(", ")}, anio, SUM(valor)::DOUBLE total
@@ -140,7 +144,7 @@ export function Historico() {
           <label className="flex flex-col gap-1.5">
             <span className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">Programa (nombre o código SNIES)</span>
             <div
-              className="flex min-w-[240px] items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 py-2 shadow-sm focus-within:border-brand-cyan focus-within:ring-2 focus-within:ring-brand-cyan-100"
+              className="flex w-[420px] max-w-full items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 py-2 shadow-sm focus-within:border-brand-cyan focus-within:ring-2 focus-within:ring-brand-cyan-100"
               title="Espacio = Y, todas las palabras deben aparecer. | separa alternativas en O -- ej: mercadeo publicidad | marketing"
             >
               <Search size={13} className="shrink-0 text-slate-400" />
