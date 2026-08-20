@@ -21,6 +21,21 @@ export function sqlKeywordsIlike(term, columns) {
   return words.map((w) => `(${columns.map((c) => `${c} ILIKE '%${esc(w)}%'`).join(" OR ")})`).join(" AND ");
 }
 
+// mini-lenguaje de búsqueda sobre sqlKeywordsIlike: "|" separa GRUPOS en O
+// (con que uno se cumpla alcanza); dentro de cada grupo, las palabras
+// separadas por espacio siguen siendo un Y (todas deben aparecer). Ej.:
+// "mercadeo publicidad | marketing" -> (mercadeo Y publicidad) O marketing.
+// Se eligió "|" y no una letra ("o"/"y") porque una palabra real de búsqueda
+// nunca la necesita, así no hay ambigüedad con lo que el usuario escriba.
+export function sqlSearchQuery(term, columns) {
+  const groups = String(term ?? "")
+    .split("|")
+    .map((g) => sqlKeywordsIlike(g, columns))
+    .filter((g) => g !== "TRUE");
+  if (!groups.length) return "TRUE";
+  return groups.length === 1 ? groups[0] : groups.map((g) => `(${g})`).join(" OR ");
+}
+
 export function normalizeName(s) {
   return String(s)
     .normalize("NFD")
