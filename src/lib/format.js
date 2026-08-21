@@ -6,27 +6,46 @@ export const decimal = (n, digits = 1) => (n == null ? "" : Number(n).toFixed(di
 export const pct = (n) => (n == null ? "" : decimal(n * 100, 1) + "%");
 export const esc = (s) => String(s).replace(/'/g, "''");
 
+// una palabra suelta -> condición "aparece en al menos una de las columnas";
+// prefijada con "-" -> lo contrario (NO debe aparecer). El COALESCE es para
+// que una columna NULL no arrastre el NOT a NULL (en SQL `NOT NULL` es NULL,
+// y la fila se perdería): si el nombre viene vacío, simplemente no contiene
+// la palabra, así que la fila se conserva.
+function wordCondition(word, columns) {
+  const negated = word.startsWith("-");
+  const bare = negated ? word.slice(1) : word;
+  if (!bare) return null;
+  const any = columns.map((c) => `${c} ILIKE '%${esc(bare)}%'`).join(" OR ");
+  return negated ? `NOT COALESCE(${any}, FALSE)` : `(${any})`;
+}
+
 // condición SQL "todas estas palabras aparecen, en cualquier orden" -- separa
 // el término escrito por espacios y exige que CADA palabra coincida (ILIKE)
 // contra AL MENOS una de las columnas dadas; todas las palabras deben
 // cumplirse (AND), cada una en cualquiera de las columnas (OR). Así "sistemas
 // comp" encuentra "Ingenieria De Sistemas Y Computacion" sin que las palabras
-// aparezcan juntas ni en ese orden. Con término vacío no filtra nada.
+// aparezcan juntas ni en ese orden. Una palabra con "-" adelante EXCLUYE
+// ("mercadeo -digital" = tiene mercadeo pero no digital). Con término vacío
+// no filtra nada.
 export function sqlKeywordsIlike(term, columns) {
-  const words = String(term ?? "")
+  const conds = String(term ?? "")
     .trim()
     .split(/\s+/)
+    .filter(Boolean)
+    .map((w) => wordCondition(w, columns))
     .filter(Boolean);
-  if (!words.length) return "TRUE";
-  return words.map((w) => `(${columns.map((c) => `${c} ILIKE '%${esc(w)}%'`).join(" OR ")})`).join(" AND ");
+  if (!conds.length) return "TRUE";
+  return conds.join(" AND ");
 }
 
 // mini-lenguaje de búsqueda sobre sqlKeywordsIlike: "|" separa GRUPOS en O
 // (con que uno se cumpla alcanza); dentro de cada grupo, las palabras
-// separadas por espacio siguen siendo un Y (todas deben aparecer). Ej.:
-// "mercadeo publicidad | marketing" -> (mercadeo Y publicidad) O marketing.
-// Se eligió "|" y no una letra ("o"/"y") porque una palabra real de búsqueda
-// nunca la necesita, así no hay ambigüedad con lo que el usuario escriba.
+// separadas por espacio siguen siendo un Y (todas deben aparecer) y las
+// prefijadas con "-" excluyen. Ej.: "mercadeo publicidad | marketing" ->
+// (mercadeo Y publicidad) O marketing; "mercadeo -digital" -> mercadeo pero
+// NO digital. Se eligieron "|" y "-" y no letras ("o"/"y"/"no") porque una
+// palabra real de búsqueda nunca los necesita al inicio, así no hay
+// ambigüedad con lo que el usuario escriba.
 export function sqlSearchQuery(term, columns) {
   const groups = String(term ?? "")
     .split("|")

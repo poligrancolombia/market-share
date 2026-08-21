@@ -145,14 +145,14 @@ export function Historico() {
             <span className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">Programa (nombre o código SNIES)</span>
             <div
               className="flex w-[420px] max-w-full items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 py-2 shadow-sm focus-within:border-brand-cyan focus-within:ring-2 focus-within:ring-brand-cyan-100"
-              title="Espacio = Y, todas las palabras deben aparecer. | separa alternativas en O -- ej: mercadeo publicidad | marketing"
+              title="Espacio = Y (todas las palabras deben aparecer). | separa alternativas en O. - adelante de una palabra la EXCLUYE -- ej: mercadeo publicidad -digital | marketing"
             >
               <Search size={13} className="shrink-0 text-slate-400" />
               <input
                 type="text"
                 value={progSearch}
                 onChange={(e) => setProgSearch(e.target.value)}
-                placeholder="ej. mercadeo publicidad | marketing"
+                placeholder="ej. mercadeo -digital | marketing"
                 className="min-w-[120px] flex-1 border-none bg-transparent py-0.5 text-[13.5px] text-brand-navy-900 outline-none placeholder:text-slate-400"
               />
               {progSearch && (
@@ -161,7 +161,7 @@ export function Historico() {
                 </button>
               )}
             </div>
-            <span className="text-[10.5px] text-slate-400">Espacio = Y (todas) · | = O (cualquiera)</span>
+            <span className="text-[10.5px] text-slate-400">Espacio = Y (todas) · | = O (cualquiera) · -palabra = excluir</span>
           </label>
         )}
 
